@@ -69,12 +69,13 @@ class Chemical(db.Model):
     cas_number = db.Column(db.String(50), nullable=False)
     barcode = db.Column(db.String(10), unique=True, nullable=False, default='')
     room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
-    space_id = db.Column(db.Integer, db.ForeignKey('space.id'), nullable=True)
+    space_id = db.Column(db.Integer, db.ForeignKey('space.id'), nullable=True)  # Foreign key to Space
     amount = db.Column(db.Float, nullable=False)
     unit = db.Column(db.String(10), nullable=False)
     expiration_date = db.Column(db.DateTime, nullable=True)
     date_added = db.Column(db.DateTime, default=datetime.utcnow)
     total_weight_lbs = db.Column(db.Float, nullable=False)
+    space = db.relationship('Space', backref='chemicals', lazy=True)
 
     @staticmethod
     def generate_barcode():

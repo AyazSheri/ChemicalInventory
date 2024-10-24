@@ -1,5 +1,6 @@
 from flask import request, jsonify
 from flask_restful import Resource
+from datetime import datetime
 from db_models.models import db, Chemical, User, PI, Building, Room, Space
 
 # --- Routes for Chemicals ---
@@ -19,6 +20,11 @@ class ChemicalListResource(Resource):
 
     def post(self):
         data = request.get_json()
+
+        expiration_date = data.get('expiration_date')
+        if expiration_date:
+            expiration_date = datetime.strptime(expiration_date, '%Y-%m-%d').date()
+        
         new_chemical = Chemical(
             name=data['name'],
             cas_number=data['cas_number'],
@@ -26,7 +32,7 @@ class ChemicalListResource(Resource):
             space_id=data.get('space_id'),  # Optional
             amount=data['amount'],
             unit=data['unit'],
-            expiration_date=data.get('expiration_date'),
+            expiration_date=expiration_date,
             total_weight_lbs=data['total_weight_lbs']
         )
         db.session.add(new_chemical)
@@ -129,6 +135,29 @@ class PIResource(Resource):
         db.session.add(new_pi)
         db.session.commit()
         return jsonify({'id': new_pi.id, 'name': new_pi.name})
+    
+# --- Route to get all PIs ---
+class PIListResource(Resource):
+    def get(self):
+        pis = PI.query.all()
+        return jsonify([{
+            'id': pi.id,
+            'name': pi.name,
+            'email': pi.email,
+            'rooms': [{'id': room.id, 'room_number': room.room_number} for room in pi.rooms]
+        } for pi in pis])
+
+# --- Route to get all Users ---
+class UserListResource(Resource):
+    def get(self):
+        users = User.query.all()
+        return jsonify([{
+            'id': user.id,
+            'name': user.name,
+            'email': user.email,
+            'pis': [{'id': pi.id, 'name': pi.name} for pi in user.pis]  # PIs the user is associated with
+        } for user in users])
+
 
 # --- Route to create Buildings ---
 class BuildingResource(Resource):
@@ -177,6 +206,8 @@ def initialize_routes(api):
     api.add_resource(UserPIResource, '/users/<int:user_id>/pis')
     api.add_resource(UserResource, '/users')
     api.add_resource(PIResource, '/pis')
+    api.add_resource(PIListResource, '/pis/all')  
+    api.add_resource(UserListResource, '/users/all')  
     api.add_resource(BuildingResource, '/buildings')
     api.add_resource(RoomResource, '/rooms')
     api.add_resource(SpaceResource, '/spaces')
