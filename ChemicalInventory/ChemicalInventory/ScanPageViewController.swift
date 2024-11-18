@@ -12,6 +12,7 @@ class ScanPageViewController: UIViewController {
     @IBOutlet weak var nameLabel: UILabel!
     @IBOutlet weak var piButton: UIButton!
     @IBOutlet weak var roomButton: UIButton!
+    @IBOutlet weak var barcodeLabel: UILabel!
     
     // Hardcoded Data
     let userName = "John Doe"
@@ -167,6 +168,15 @@ class ScanPageViewController: UIViewController {
         }
     }
     
+    @IBAction func openBarcodeScanner(_ sender: UIButton) {
+        let scannerVC = BarcodeScannerViewController()
+        scannerVC.modalPresentationStyle = .fullScreen
+        scannerVC.onBarcodeScanned = { [weak self] barcode in
+            // Log the scanned barcode to the console
+            print("Scanned Barcode: \(barcode)")
+            
+        }
+        present(scannerVC, animated: true)
+    }
     
-
 }
