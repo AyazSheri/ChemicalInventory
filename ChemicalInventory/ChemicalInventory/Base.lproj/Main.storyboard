@@ -65,20 +65,6 @@
                                     <action selector="toggleRoomDropdown:" destination="13P-ak-Xz9" eventType="touchUpInside" id="jr6-Tb-QPG"/>
                                 </connections>
                             </button>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="PI: " textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="p15-aT-JyF">
-                                <rect key="frame" x="50" y="182" width="30" height="21"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                <nil key="textColor"/>
-                                <nil key="highlightedColor"/>
-                            </label>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Room:" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="O7H-x4-SVn">
-                                <rect key="frame" x="49" y="254" width="50" height="21"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                <nil key="textColor"/>
-                                <nil key="highlightedColor"/>
-                            </label>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Name: " lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="KUM-iI-MOM">
                                 <rect key="frame" x="50" y="126" width="300" height="21"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
@@ -103,6 +89,7 @@
                         <outlet property="nameLabel" destination="KUM-iI-MOM" id="ZOu-XC-oSU"/>
                         <outlet property="piButton" destination="J4T-Kb-szk" id="m8D-F3-vUA"/>
                         <outlet property="roomButton" destination="Ufv-NA-VVu" id="YvD-Ub-vDG"/>
+                        <outlet property="scanButton" destination="5K4-yk-OyI" id="mdm-YQ-P7j"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="khW-4G-i1q" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>

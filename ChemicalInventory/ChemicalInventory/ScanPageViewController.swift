@@ -12,7 +12,7 @@ class ScanPageViewController: UIViewController {
     @IBOutlet weak var nameLabel: UILabel!
     @IBOutlet weak var piButton: UIButton!
     @IBOutlet weak var roomButton: UIButton!
-    @IBOutlet weak var barcodeLabel: UILabel!
+    @IBOutlet weak var scanButton: UIButton!
     
     // Hardcoded Data
     let userName = "John Doe"
@@ -24,75 +24,138 @@ class ScanPageViewController: UIViewController {
     var roomDropdownView: UIView?
     
     override func viewDidLoad() {
-            super.viewDidLoad()
+        super.viewDidLoad()
+        
+        // Set User's Name
+        nameLabel.text = "Name: \(userName)"
+        
+        // Remove existing constraints to start fresh
+        nameLabel.translatesAutoresizingMaskIntoConstraints = false
+        piButton.translatesAutoresizingMaskIntoConstraints = false
+        roomButton.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Create labels for "PI:" and "Room:"
+        let piLabel = UILabel()
+        piLabel.text = "PI:"
+        piLabel.font = nameLabel.font
+        piLabel.textAlignment = .left
+        piLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(piLabel)
+        
+        let roomLabel = UILabel()
+        roomLabel.text = "Room:"
+        roomLabel.font = nameLabel.font
+        roomLabel.textAlignment = .left
+        roomLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(roomLabel)
+        
+        // Ensure Scan button is centered dynamically
+        scanButton.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            scanButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            scanButton.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: 50),
+            scanButton.widthAnchor.constraint(equalToConstant: 150),
+            scanButton.heightAnchor.constraint(equalToConstant: 50)
+        ])
 
-            // Set User's Name
-            nameLabel.text = "Name: \(userName)"
-
-            // Style buttons and set initial titles
-            setupButton(button: piButton, initialTitle: piList[0])
-            setupButton(button: roomButton, initialTitle: roomList[0])
+        
+        // Add constraints for alignment
+        NSLayoutConstraint.activate([
+            // Name label constraints
+            nameLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            nameLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            
+            // PI label constraints
+            piLabel.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
+            piLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 20),
+            
+            // PI button constraints
+            piButton.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
+            piButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            piButton.topAnchor.constraint(equalTo: piLabel.bottomAnchor, constant: 10),
+            piButton.heightAnchor.constraint(equalToConstant: 44),
+            
+            // Room label constraints
+            roomLabel.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
+            roomLabel.topAnchor.constraint(equalTo: piButton.bottomAnchor, constant: 20),
+            
+            // Room button constraints
+            roomButton.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
+            roomButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            roomButton.topAnchor.constraint(equalTo: roomLabel.bottomAnchor, constant: 10),
+            roomButton.heightAnchor.constraint(equalToConstant: 44),
+        ])
+        
+        // Style buttons and set initial titles
+        setupButton(button: piButton, initialTitle: piList[0])
+        setupButton(button: roomButton, initialTitle: roomList[0])
+    }
+    
+    
+    
+    private func setupButton(button: UIButton, initialTitle: String) {
+        // Clear any existing title to avoid overlap
+        button.setTitle("", for: .normal)
+        
+        // Add a label for the button's text
+        let textLabel = UILabel()
+        textLabel.text = initialTitle
+        textLabel.font = button.titleLabel?.font
+        textLabel.textColor = button.titleColor(for: .normal) ?? .blue
+        textLabel.translatesAutoresizingMaskIntoConstraints = false
+        button.addSubview(textLabel)
+        
+        // Add a label for the chevron symbol
+        let chevronLabel = UILabel()
+        chevronLabel.text = "▼"
+        chevronLabel.font = button.titleLabel?.font
+        chevronLabel.textColor = .gray
+        chevronLabel.translatesAutoresizingMaskIntoConstraints = false
+        button.addSubview(chevronLabel)
+        
+        // Add constraints to make the button dynamically adjust to screen size
+        NSLayoutConstraint.activate([
+            // Align the text label to the left with a margin
+            textLabel.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 10),
+            textLabel.centerYAnchor.constraint(equalTo: button.centerYAnchor),
+            
+            // Align the chevron label to the right with a margin
+            chevronLabel.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -10),
+            chevronLabel.centerYAnchor.constraint(equalTo: button.centerYAnchor),
+            
+            // Set the button's height dynamically
+            button.heightAnchor.constraint(equalToConstant: 44), // Standard button height
+        ])
+        
+        // Style the button appearance
+        button.layer.borderWidth = 1
+        button.layer.borderColor = UIColor.gray.cgColor
+        button.layer.cornerRadius = 8
+        
+        // Ensure the button resizes correctly on different devices
+        button.translatesAutoresizingMaskIntoConstraints = false
+    }
+    
+    
+    @objc private func optionSelected(_ sender: UIButton) {
+        guard let selectedOption = sender.currentTitle else { return }
+        if sender.superview == piDropdownView {
+            updateButtonTitle(button: piButton, newTitle: selectedOption)
+            piDropdownView?.removeFromSuperview()
+        } else if sender.superview == roomDropdownView {
+            updateButtonTitle(button: roomButton, newTitle: selectedOption)
+            roomDropdownView?.removeFromSuperview()
         }
-
-        private func setupButton(button: UIButton, initialTitle: String) {
-            // Clear any existing title to avoid overlap
-            button.setTitle("", for: .normal)
-
-            // Add a label for the button's text
-            let textLabel = UILabel()
-            textLabel.text = initialTitle
-            textLabel.font = button.titleLabel?.font
-            textLabel.textColor = button.titleColor(for: .normal) ?? .blue
-            textLabel.translatesAutoresizingMaskIntoConstraints = false
-            button.addSubview(textLabel)
-
-            // Add a label for the chevron symbol
-            let chevronLabel = UILabel()
-            chevronLabel.text = "▼"
-            chevronLabel.font = button.titleLabel?.font
-            chevronLabel.textColor = .gray
-            chevronLabel.translatesAutoresizingMaskIntoConstraints = false
-            button.addSubview(chevronLabel)
-
-            // Align the text label to the left and center vertically
-            NSLayoutConstraint.activate([
-                textLabel.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 10),
-                textLabel.centerYAnchor.constraint(equalTo: button.centerYAnchor),
-
-                // Align the chevron label to the right and center vertically
-                chevronLabel.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -10),
-                chevronLabel.centerYAnchor.constraint(equalTo: button.centerYAnchor)
-            ])
-
-            // Style the button appearance
-            button.layer.borderWidth = 1
-            button.layer.borderColor = UIColor.gray.cgColor
-            button.layer.cornerRadius = 8
-
-            // Keep the button's touchable functionality intact
-            button.bringSubviewToFront(textLabel)
-            button.bringSubviewToFront(chevronLabel)
+    }
+    
+    private func updateButtonTitle(button: UIButton, newTitle: String) {
+        // Find the text label inside the button and update its text
+        if let textLabel = button.subviews.compactMap({ $0 as? UILabel }).first {
+            textLabel.text = newTitle
         }
-
-        @objc private func optionSelected(_ sender: UIButton) {
-            guard let selectedOption = sender.currentTitle else { return }
-            if sender.superview == piDropdownView {
-                updateButtonTitle(button: piButton, newTitle: selectedOption)
-                piDropdownView?.removeFromSuperview()
-            } else if sender.superview == roomDropdownView {
-                updateButtonTitle(button: roomButton, newTitle: selectedOption)
-                roomDropdownView?.removeFromSuperview()
-            }
-        }
-
-        private func updateButtonTitle(button: UIButton, newTitle: String) {
-            // Find the text label inside the button and update its text
-            if let textLabel = button.subviews.compactMap({ $0 as? UILabel }).first {
-                textLabel.text = newTitle
-            }
-        }
-
-
+    }
+    
+    
     
     // MARK: - Dropdown Handling
     @IBAction func togglePiDropdown(_ sender: UIButton) {
@@ -124,13 +187,13 @@ class ScanPageViewController: UIViewController {
         // Remove existing dropdown
         dropdownView?.removeFromSuperview()
         dropdownView = nil
-
+        
         // Create dropdown if it doesn’t exist
         if dropdownView == nil {
             // Calculate the dropdown's frame based on the button's text alignment
             let dropdownXOffset: CGFloat = 3 // Adjust to align with text
             let dropdownWidth = button.frame.width - dropdownXOffset
-
+            
             let dropdown = UIView(frame: CGRect(
                 x: button.frame.origin.x + dropdownXOffset, // Offset to align with text
                 y: button.frame.origin.y + button.frame.height,
@@ -141,7 +204,7 @@ class ScanPageViewController: UIViewController {
             dropdown.layer.borderWidth = 1
             dropdown.layer.cornerRadius = 8
             dropdown.backgroundColor = .white
-
+            
             // Add options as buttons inside the dropdown
             for (index, option) in options.enumerated() {
                 let optionButton = UIButton(frame: CGRect(
@@ -157,7 +220,7 @@ class ScanPageViewController: UIViewController {
                 optionButton.addTarget(self, action: #selector(optionSelected(_:)), for: .touchUpInside)
                 dropdown.addSubview(optionButton)
             }
-
+            
             // Add dropdown to the view
             self.view.addSubview(dropdown)
             dropdownView = dropdown
