@@ -4,157 +4,74 @@
 //
 //
 
-
 import SwiftUI
-import AVFoundation
 
 struct MainPageView: View {
     @State private var isShowingScanner = false
-    
+
     var body: some View {
-        VStack {
-            Text("Scan Your Chemical's Barcode")
-                .font(.title)
-                .padding()
-            
-            Spacer()
-            
-            Button(action: {
-                isShowingScanner = true
-            }) {
-                Image(systemName: "barcode.viewfinder")
-                    .resizable()
-                    .frame(width: 100, height: 100)
+        NavigationView {
+            VStack(spacing: 20) {
+                Text("Welcome to the Chemical Inventory App")
+                    .font(.title)
                     .padding()
+
+                Spacer()
+
+                // Inventory Button
+                NavigationLink(destination: InventoryView()) {
+                    Text("Go to Inventory")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
+
+                // Profile Button
+                NavigationLink(destination: ProfileView()) {
+                    Text("Go to Profile")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.green)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
+
+                // Settings Button
+                NavigationLink(destination: SettingsView()) {
+                    Text("Go to Settings")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.orange)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
+
+                // Scan Barcode Button
+                Button(action: {
+                    isShowingScanner = true
+                }) {
+                    Text("Scan Barcode")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.purple)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
+                .sheet(isPresented: $isShowingScanner) {
+                    BarcodeScannerView()
+                }
+
+                Spacer()
             }
-            .sheet(isPresented: $isShowingScanner) {
-                BarcodeScannerView()
-            }
-            
-            Spacer()
+            .padding()
+            .navigationTitle("Main Page")
         }
     }
 }
 
-struct BarcodeScannerView: UIViewControllerRepresentable {
-    @Environment(\.presentationMode) var presentationMode
-    
-    func makeUIViewController(context: Context) -> BarcodeScannerViewController {
-        let viewController = BarcodeScannerViewController()
-        viewController.dismissScanner = {
-            presentationMode.wrappedValue.dismiss()
-        }
-        return viewController
-    }
-    
-    func updateUIViewController(_ uiViewController: BarcodeScannerViewController, context: Context) {
-        // No need to update UI Controller
-    }
-}
-
-class BarcodeScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
-    var captureSession: AVCaptureSession!
-    var dismissScanner: (() -> Void)?  // Closure to trigger dismissing
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        view.backgroundColor = UIColor.black
-        captureSession = AVCaptureSession()
-        
-        guard let videoCaptureDevice = AVCaptureDevice.default(for: .video) else { return }
-        let videoInput: AVCaptureDeviceInput
-        
-        do {
-            videoInput = try AVCaptureDeviceInput(device: videoCaptureDevice)
-        } catch {
-            return
-        }
-        
-        if (captureSession.canAddInput(videoInput)) {
-            captureSession.addInput(videoInput)
-        } else {
-            return
-        }
-        
-        let metadataOutput = AVCaptureMetadataOutput()
-        
-        if (captureSession.canAddOutput(metadataOutput)) {
-            captureSession.addOutput(metadataOutput)
-            
-            metadataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
-            metadataOutput.metadataObjectTypes = [.ean13, .ean8, .qr] // Add barcode types here
-        } else {
-            return
-        }
-        
-        let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-        previewLayer.frame = view.layer.bounds
-        previewLayer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(previewLayer)
-        
-        // Add the back button with safe area handling
-        let backButton = UIButton(type: .system)
-        backButton.setTitle("Back", for: .normal)
-        backButton.setTitleColor(.white, for: .normal)
-        backButton.backgroundColor = UIColor(white: 0.1, alpha: 0.7)  // Dark background for visibility
-        backButton.layer.cornerRadius = 5
-        backButton.translatesAutoresizingMaskIntoConstraints = false
-        
-        view.addSubview(backButton)
-        
-        // Constraints for proper positioning (using safe area)
-        NSLayoutConstraint.activate([
-            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
-            backButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
-            backButton.widthAnchor.constraint(equalToConstant: 80),
-            backButton.heightAnchor.constraint(equalToConstant: 40)
-        ])
-        
-        backButton.addTarget(self, action: #selector(backButtonPressed), for: .touchUpInside)
-        
-        captureSession.startRunning()
-    }
-    
-    @objc func backButtonPressed() {
-        dismissScanner?()  // Trigger the dismiss closure
-    }
-    
-    func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
-        captureSession.stopRunning()
-        
-        if let metadataObject = metadataObjects.first {
-            guard let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject else { return }
-            guard let stringValue = readableObject.stringValue else { return }
-            AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
-            found(code: stringValue)
-        }
-        
-        dismiss(animated: true)
-    }
-    
-    func found(code: String) {
-        print("Scanned Barcode: \(code)")
-        // Handle the scanned barcode value here
-    }
-    
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        return .portrait
-    }
-    
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        
-        if captureSession.isRunning {
-            captureSession.stopRunning()
-        }
-    }
-    
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        
-        if captureSession.isRunning {
-            captureSession.stopRunning()
-        }
-    }
-}
