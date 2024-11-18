@@ -5,57 +5,90 @@
 //  Created by Nabaa Naveed on 10/2/24.
 //
 
+
 import SwiftUI
 
 struct LoginView: View {
-    @State private var id = ""
+    @State private var email = ""
     @State private var password = ""
-    
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+    @State private var isLoggedIn = false
+    @State private var showSignUp = false
+
+    let firestoreService = FirestoreService()
+
     var body: some View {
-        VStack {
-            // Displaying the logo at the top center
-            Image("logo") // Make sure the logo image is added to Assets.xcassets
-                .resizable()
-                .scaledToFit()
-                .frame(width: 150, height: 150)
-                .padding(.top, 40)
-            
-            Text("Chemical Inventory Login")
-                .font(.title)
-                .padding(.bottom, 20)
-            
-            TextField("ID", text: $id)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding(.horizontal)
-            
-            SecureField("Password", text: $password)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding(.horizontal)
-            
-            Button(action: {
-                // Handle Login Logic
-            }) {
-                Text("Login")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-            }
-            .padding(.horizontal)
-            
-            Spacer()
-            
-            HStack {
-                Text("Don't have an account?")
+        NavigationStack {
+            VStack {
+                Text("Chemical Inventory Login")
+                    .font(.title)
+                    .padding(.bottom, 20)
+
+                TextField("Email", text: $email)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal)
+                    .keyboardType(.emailAddress)
+                    .autocapitalization(.none)
+
+                SecureField("Password", text: $password)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal)
+
+                // Login Button
                 Button(action: {
-                    SignUpView()
+                    firestoreService.loginUser(email: email, password: password) { success, error in
+                        if success {
+                            alertMessage = "Login successful!"
+                            showAlert = true
+                        } else {
+                            alertMessage = error ?? "Login failed."
+                            showAlert = true
+                        }
+                    }
                 }) {
-                    Text("Sign Up")
+                    Text("Login")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
+                .alert(isPresented: $showAlert) {
+                    Alert(
+                        title: Text("Login"),
+                        message: Text(alertMessage),
+                        dismissButton: .default(Text("OK"), action: {
+                            if alertMessage == "Login successful!" {
+                                isLoggedIn = true
+                            }
+                        })
+                    )
+                }
+
+                Spacer()
+
+                // Sign Up Button
+                Button(action: {
+                    showSignUp = true
+                }) {
+                    Text("Don't have an account? Sign Up")
                         .foregroundColor(.blue)
                 }
+                .padding()
+
+                // Navigation to SignUpView
+                NavigationLink(destination: SignUpView(isLoggedIn: $isLoggedIn), isActive: $showSignUp) {
+                    EmptyView()
+                }
+
+                // Navigate to MainPageView after successful login
+                NavigationLink(destination: MainPageView(), isActive: $isLoggedIn) {
+                    EmptyView()
+                }
             }
+            .padding()
         }
-        .padding()
     }
 }
