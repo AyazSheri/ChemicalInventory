@@ -9,21 +9,27 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @State private var user: User = User(firstName: "David", lastName: "Graves", email: "david@example.com", phone: "555-1234", isPI: true, isResearcher: false)
-    
     var body: some View {
         VStack {
-            Text("Profile")
+            Text("Profile View")
                 .font(.title)
                 .padding()
-            
-            List {
-                Text("First Name: \(user.firstName)")
-                Text("Last Name: \(user.lastName)")
-                Text("Email: \(user.email)")
-                Text("Phone: \(user.phone)")
-                Text("Role: \(user.isPI ? "PI" : "Researcher")")
+
+            Spacer()
+
+            // Back Button
+            NavigationLink(destination: MainPageView()) {
+                Text("Back to Main Page")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
             }
+            .padding(.horizontal)
+
+            Spacer()
         }
+        .navigationTitle("Profile")
     }
 }
