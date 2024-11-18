@@ -9,27 +9,27 @@
 import SwiftUI
 
 struct InventoryView: View {
-    @State private var chemicals = [
-        Chemical(id: UUID(), name: "Acetonitrile", barcode: "000052461", amount: "4L", lastUpdated: Date())
-    ]
-    
     var body: some View {
-        List(chemicals) { chemical in
-            HStack {
-                VStack(alignment: .leading) {
-                    Text(chemical.name)
-                        .font(.headline)
-                    Text("Barcode: \(chemical.barcode)")
-                    Text("Amount: \(chemical.amount)")
-                    Text("Last Updated: \(chemical.lastUpdated, formatter: dateFormatter)")
-                }
+        VStack {
+            Text("Inventory View")
+                .font(.title)
+                .padding()
+
+            Spacer()
+
+            // Back Button
+            NavigationLink(destination: MainPageView()) {
+                Text("Back to Main Page")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
             }
+            .padding(.horizontal)
+
+            Spacer()
         }
+        .navigationTitle("Inventory")
     }
 }
-
-private let dateFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    return formatter
-}()
