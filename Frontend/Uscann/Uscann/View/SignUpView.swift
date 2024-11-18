@@ -5,62 +5,54 @@
 import SwiftUI
 
 struct SignUpView: View {
+    @Binding var isLoggedIn: Bool
     @State private var name = ""
     @State private var email = ""
     @State private var id = ""
     @State private var password = ""
     @State private var confirmPassword = ""
-    @State private var selectedRole: String = ""
+    @State private var selectedRole = ""
     @State private var isDropdownExpanded = false
-    @State private var searchText = ""
-    
-    // Hardcoded data for the dropdown
-    let roles = ["Researcher", "Principal Investigator (PI)", "Lab Assistant", "Student", "Lab Technician"]
+    @State private var showAlert = false
+    @State private var alertMessage = ""
 
-    var filteredRoles: [String] {
-        roles.filter { searchText.isEmpty || $0.lowercased().contains(searchText.lowercased()) }
-    }
+    let roles = ["Researcher", "Principal Investigator (PI)", "Lab Assistant", "Student", "Lab Technician"]
+    let firestoreService = FirestoreService()
 
     var body: some View {
         VStack {
             Text("Sign Up")
                 .font(.title)
                 .padding(.bottom, 20)
-            
-            // Name Field
+
             TextField("Name", text: $name)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal)
-            
-            // Email Field
+
             TextField("Email", text: $email)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal)
                 .keyboardType(.emailAddress)
                 .autocapitalization(.none)
-            
-            // ID Field
+
             TextField("ID", text: $id)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal)
-            
-            // Password Field
+
             SecureField("Password", text: $password)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal)
-            
-            // Confirm Password Field
+
             SecureField("Confirm Password", text: $confirmPassword)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal)
-            
-            // Custom dropdown for selecting a role
+
+            // Role Selection Dropdown
             VStack(alignment: .leading) {
                 Text("Select Role")
                     .font(.subheadline)
                     .foregroundColor(.gray)
-                
-                // Dropdown button
+
                 Button(action: {
                     withAnimation {
                         isDropdownExpanded.toggle()
@@ -70,51 +62,49 @@ struct SignUpView: View {
                         Text(selectedRole.isEmpty ? "Select a role" : selectedRole)
                             .foregroundColor(selectedRole.isEmpty ? .gray : .black)
                         Spacer()
-                        Image(systemName: isDropdownExpanded ? "chevron.up" : "chevron.down")
+                        Image(systemName: "chevron.down")
                             .foregroundColor(.gray)
                     }
                     .padding()
                     .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
                 }
-                
+
                 if isDropdownExpanded {
-                    VStack {
-                        // Search bar
-                        TextField("Search roles...", text: $searchText)
-                            .padding(8)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(8)
-                            .padding(.horizontal)
-                        
-                        // Dropdown list
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 5) {
-                                ForEach(filteredRoles, id: \.self) { role in
-                                    Button(action: {
-                                        selectedRole = role
-                                        isDropdownExpanded = false
-                                        searchText = ""
-                                    }) {
-                                        Text(role)
-                                            .padding()
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                    }
-                                    .foregroundColor(.black)
-                                }
+                    ScrollView {
+                        ForEach(roles, id: \.self) { role in
+                            Button(action: {
+                                selectedRole = role
+                                isDropdownExpanded = false
+                            }) {
+                                Text(role)
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            .padding(.vertical, 5)
+                            .foregroundColor(.black)
                         }
-                        .frame(height: 150) // Set height for dropdown list
                     }
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.white).shadow(radius: 5))
+                    .frame(height: 150)
                 }
             }
             .padding(.horizontal)
-            .padding(.top)
-            
+
             // Sign Up Button
             Button(action: {
-                // Handle Sign Up Logic
+                if password != confirmPassword {
+                    alertMessage = "Passwords do not match."
+                    showAlert = true
+                    return
+                }
+
+                firestoreService.createUserProfile(name: name, email: email, id: id, password: password, role: selectedRole) { success, error in
+                    if success {
+                        alertMessage = "Profile created successfully!"
+                        isLoggedIn = true
+                    } else {
+                        alertMessage = error ?? "Failed to create profile."
+                    }
+                    showAlert = true
+                }
             }) {
                 Text("Sign Up")
                     .frame(maxWidth: .infinity)
@@ -124,8 +114,24 @@ struct SignUpView: View {
                     .cornerRadius(8)
             }
             .padding(.horizontal)
-            
+            .alert(isPresented: $showAlert) {
+                Alert(
+                    title: Text("Sign Up"),
+                    message: Text(alertMessage),
+                    dismissButton: .default(Text("OK"), action: {
+                        if isLoggedIn {
+                            isLoggedIn = true
+                        }
+                    })
+                )
+            }
+
             Spacer()
+
+            // Navigate to MainPageView after successful sign up
+            NavigationLink(destination: MainPageView(), isActive: $isLoggedIn) {
+                EmptyView()
+            }
         }
         .padding()
     }
