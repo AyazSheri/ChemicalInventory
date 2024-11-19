@@ -19,6 +19,26 @@ class ScanPageViewController: UIViewController {
     let piList = ["PI 1", "PI 2", "PI 3"]
     let roomList = ["Room 101", "Room 102", "Room 103"]
     
+    // Dummy data for chemicals
+    let chemicalData: [String: [String: Any]] = [
+        "123456789012": [
+            "name": "Acetone",
+            "casNumber": "67-64-1",
+            "amount": 500.0,
+            "unit": "mL",
+            "expirationDate": "2025-12-31",
+            "spaces": ["Storage Room 1", "Storage Room 2"]
+        ],
+        "987654321098": [
+            "name": "Ethanol",
+            "casNumber": "64-17-5",
+            "amount": 250.0,
+            "unit": "mL",
+            "expirationDate": "2026-06-15",
+            "spaces": ["Lab A", "Lab B"]
+        ]
+    ]
+
     // Dropdown Views
     var piDropdownView: UIView?
     var roomDropdownView: UIView?
@@ -235,11 +255,70 @@ class ScanPageViewController: UIViewController {
         let scannerVC = BarcodeScannerViewController()
         scannerVC.modalPresentationStyle = .fullScreen
         scannerVC.onBarcodeScanned = { [weak self] barcode in
-            // Log the scanned barcode to the console
+            guard let self = self else { return }
             print("Scanned Barcode: \(barcode)")
-            
+
+            // Dismiss the scanner first
+            scannerVC.dismiss(animated: true) {
+                if let chemicalInfo = self.chemicalData[barcode] {
+                    self.showChemicalInfoDialog(chemicalInfo: chemicalInfo)
+                } else {
+                    print("Chemical not found for barcode: \(barcode)")
+                }
+            }
         }
         present(scannerVC, animated: true)
     }
+
+    
+    func showChemicalInfoDialog(chemicalInfo: [String: Any]) {
+        guard let name = chemicalInfo["name"] as? String,
+              let casNumber = chemicalInfo["casNumber"] as? String,
+              let amount = chemicalInfo["amount"] as? Double,
+              let unit = chemicalInfo["unit"] as? String,
+              let expirationDate = chemicalInfo["expirationDate"] as? String,
+              let spaces = chemicalInfo["spaces"] as? [String] else {
+            return
+        }
+        
+        let chemicalDialog = ChemicalInfoDialog()
+        chemicalDialog.chemicalName = name
+        chemicalDialog.casNumber = casNumber
+        chemicalDialog.amount = amount
+        chemicalDialog.unit = unit
+        chemicalDialog.expirationDate = expirationDate
+
+        chemicalDialog.onEditTapped = {
+            self.showEditChemicalDialog(chemicalInfo: chemicalInfo)
+        }
+        
+        chemicalDialog.onEnterUsedAmountTapped = { usedAmount, selectedUnit in
+            let remainingAmount = max(0, amount - usedAmount)
+            print("New amount: \(remainingAmount) \(selectedUnit)")
+            // You could update the UI or data here
+        }
+        
+        present(chemicalDialog, animated: true)
+    }
+    
+    func showEditChemicalDialog(chemicalInfo: [String: Any]) {
+        guard let spaces = chemicalInfo["spaces"] as? [String] else { return }
+
+        let editDialog = EditChemicalDialog()
+        editDialog.spaces = spaces
+        editDialog.selectedSpace = spaces.first ?? ""
+
+        editDialog.onSaveTapped = { updatedSpace in
+            print("Updated Space: \(updatedSpace)")
+        }
+
+        editDialog.onDeleteTapped = {
+            print("Chemical deleted!")
+        }
+        
+        present(editDialog, animated: true)
+    }
+
+
     
 }
