@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		AB4CBFC82CEC679400EC21AF /* SCLAlertView in Frameworks */ = {isa = PBXBuildFile; productRef = AB4CBFC72CEC679400EC21AF /* SCLAlertView */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		AB88C30E2CEAC93600752B54 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -65,6 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB4CBFC82CEC679400EC21AF /* SCLAlertView in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,6 +130,7 @@
 			);
 			name = ChemicalInventory;
 			packageProductDependencies = (
+				AB4CBFC72CEC679400EC21AF /* SCLAlertView */,
 			);
 			productName = ChemicalInventory;
 			productReference = AB88C2F72CEAC93600752B54 /* ChemicalInventory.app */;
@@ -208,6 +214,9 @@
 			);
 			mainGroup = AB88C2EE2CEAC93600752B54;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				AB4CBFC62CEC679400EC21AF /* XCRemoteSwiftPackageReference "SCLAlertView" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = AB88C2F82CEAC93600752B54 /* Products */;
 			projectDirPath = "";
@@ -565,6 +574,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AB4CBFC62CEC679400EC21AF /* XCRemoteSwiftPackageReference "SCLAlertView" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/vikmeup/SCLAlertView.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.8.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AB4CBFC72CEC679400EC21AF /* SCLAlertView */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AB4CBFC62CEC679400EC21AF /* XCRemoteSwiftPackageReference "SCLAlertView" */;
+			productName = SCLAlertView;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = AB88C2EF2CEAC93600752B54 /* Project object */;
 }

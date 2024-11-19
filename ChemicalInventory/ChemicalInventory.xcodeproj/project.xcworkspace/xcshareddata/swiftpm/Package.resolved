@@ -1,0 +1,15 @@
+{
+  "originHash" : "5c994c7bd1b22a470eefce697a95655e5bba450c941b8b443d98bf4e4f285d3c",
+  "pins" : [
+    {
+      "identity" : "sclalertview",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/vikmeup/SCLAlertView.git",
+      "state" : {
+        "revision" : "a36c9258dc623f368753a17d4bea4e0a751bc02f",
+        "version" : "0.8.2"
+      }
+    }
+  ],
+  "version" : 3
+}

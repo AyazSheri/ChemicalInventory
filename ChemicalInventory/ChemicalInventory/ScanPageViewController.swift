@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import SCLAlertView
 
 class ScanPageViewController: UIViewController {
     // Outlets for UI Elements
@@ -13,6 +14,10 @@ class ScanPageViewController: UIViewController {
     @IBOutlet weak var piButton: UIButton!
     @IBOutlet weak var roomButton: UIButton!
     @IBOutlet weak var scanButton: UIButton!
+    
+    
+    
+    
     
     // Hardcoded Data
     let userName = "John Doe"
@@ -257,11 +262,10 @@ class ScanPageViewController: UIViewController {
         scannerVC.onBarcodeScanned = { [weak self] barcode in
             guard let self = self else { return }
             print("Scanned Barcode: \(barcode)")
-
-            // Dismiss the scanner first
+            
             scannerVC.dismiss(animated: true) {
                 if let chemicalInfo = self.chemicalData[barcode] {
-                    self.showChemicalInfoDialog(chemicalInfo: chemicalInfo)
+                    self.showChemicalInfoPopup(chemicalInfo: chemicalInfo)
                 } else {
                     print("Chemical not found for barcode: \(barcode)")
                 }
@@ -269,9 +273,8 @@ class ScanPageViewController: UIViewController {
         }
         present(scannerVC, animated: true)
     }
-
     
-    func showChemicalInfoDialog(chemicalInfo: [String: Any]) {
+    private func showChemicalInfoViewController(chemicalInfo: [String: Any]) {
         guard let name = chemicalInfo["name"] as? String,
               let casNumber = chemicalInfo["casNumber"] as? String,
               let amount = chemicalInfo["amount"] as? Double,
@@ -281,43 +284,147 @@ class ScanPageViewController: UIViewController {
             return
         }
         
-        let chemicalDialog = ChemicalInfoDialog()
-        chemicalDialog.chemicalName = name
-        chemicalDialog.casNumber = casNumber
-        chemicalDialog.amount = amount
-        chemicalDialog.unit = unit
-        chemicalDialog.expirationDate = expirationDate
-
-        chemicalDialog.onEditTapped = {
-            self.showEditChemicalDialog(chemicalInfo: chemicalInfo)
-        }
+        let chemicalVC = ChemicalInfoViewController()
+        chemicalVC.chemicalName = name
+        chemicalVC.casNumber = casNumber
+        chemicalVC.amount = amount
+        chemicalVC.unit = unit
+        chemicalVC.expirationDate = expirationDate
         
-        chemicalDialog.onEnterUsedAmountTapped = { usedAmount, selectedUnit in
+        chemicalVC.onEnterUsedAmountTapped = { usedAmount, selectedUnit in
             let remainingAmount = max(0, amount - usedAmount)
-            print("New amount: \(remainingAmount) \(selectedUnit)")
-            // You could update the UI or data here
+            print("Updated Remaining Amount: \(remainingAmount) \(selectedUnit)")
         }
         
-        present(chemicalDialog, animated: true)
+        chemicalVC.onEditTapped = {
+            self.showEditChemicalViewController(spaces: spaces)
+        }
+        
+        chemicalVC.modalPresentationStyle = .formSheet
+        present(chemicalVC, animated: true)
     }
     
-    func showEditChemicalDialog(chemicalInfo: [String: Any]) {
-        guard let spaces = chemicalInfo["spaces"] as? [String] else { return }
-
-        let editDialog = EditChemicalDialog()
-        editDialog.spaces = spaces
-        editDialog.selectedSpace = spaces.first ?? ""
-
-        editDialog.onSaveTapped = { updatedSpace in
+    private func showEditChemicalViewController(spaces: [String]) {
+        let editVC = EditChemicalDialog()
+        editVC.spaces = spaces
+        editVC.selectedSpace = spaces.first ?? ""
+        
+        editVC.onSaveTapped = { updatedSpace in
             print("Updated Space: \(updatedSpace)")
         }
-
-        editDialog.onDeleteTapped = {
+        
+        editVC.onDeleteTapped = {
             print("Chemical deleted!")
         }
         
-        present(editDialog, animated: true)
+        editVC.modalPresentationStyle = .formSheet
+        present(editVC, animated: true)
     }
+
+    private func showChemicalInfoPopup(chemicalInfo: [String: Any]) {
+        guard let name = chemicalInfo["name"] as? String,
+              let casNumber = chemicalInfo["casNumber"] as? String,
+              let amount = chemicalInfo["amount"] as? Double,
+              let unit = chemicalInfo["unit"] as? String,
+              let expirationDate = chemicalInfo["expirationDate"] as? String else {
+            return
+        }
+
+        DispatchQueue.main.async {
+            // Create SCLAlertView with appropriate appearance
+            let appearance = SCLAlertView.SCLAppearance(
+                showCloseButton: false, // Remove default "Done" button
+                buttonsLayout: .vertical // Vertically align buttons
+            )
+            let alert = SCLAlertView(appearance: appearance)
+
+            // Combine all text into the title for larger font size
+            let message = """
+            Name: \(name)
+            CAS: \(casNumber)
+            Remaining: \(amount) \(unit)
+            Expiration: \(expirationDate)
+            """
+
+            // Add buttons
+            alert.addButton("Use") {
+                self.showChangeAmountPopup(currentAmount: amount, currentUnit: unit)
+            }
+            alert.addButton("Edit") {
+                print("Edit button tapped")
+            }
+            alert.addButton("Cancel", action: {})
+
+            // Display the alert with all info in the title
+            alert.showInfo(
+                message, // Set message as the title for larger font size
+                subTitle: "" // Empty subtitle
+            )
+        }
+    }
+
+
+
+    private func showChangeAmountPopup(currentAmount: Double, currentUnit: String) {
+        DispatchQueue.main.async {
+            // Create SCLAlertView with no "Done" button
+            let appearance = SCLAlertView.SCLAppearance(
+                showCloseButton: false, // Remove "Done" button
+                buttonsLayout: .horizontal // Center "Save" and "Cancel" horizontally
+            )
+            let alert = SCLAlertView(appearance: appearance)
+
+            // Add text field for entering the amount
+            let amountField = alert.addTextField("Enter Amount")
+            amountField.keyboardType = .decimalPad
+
+            // Define unit options based on current unit type
+            let unitOptions = currentUnit == "mL" ? ["mL", "L", "uL"] : ["g", "kg", "mg"]
+
+            // Wrap UISegmentedControl in a centered container view
+            let containerWidth: CGFloat = 240
+            let container = UIView(frame: CGRect(x: 0, y: 0, width: containerWidth, height: 80))
+
+            let unitSegmentedControl = UISegmentedControl(items: unitOptions)
+            let controlPadding: CGFloat = 20
+            let controlWidth = containerWidth - (2 * controlPadding) // Fixed padding on both sides
+            unitSegmentedControl.frame = CGRect(
+                x: controlPadding,
+                y: 25,
+                width: controlWidth,
+                height: 30
+            )
+            unitSegmentedControl.selectedSegmentIndex = 0
+            container.addSubview(unitSegmentedControl)
+
+            // Add the container as a custom view
+            alert.customSubview = container
+
+            // Automatically focus the text field to bring up the numpad instantly
+            amountField.becomeFirstResponder()
+
+            // Add buttons
+            alert.addButton("Save") {
+                guard let enteredAmount = Double(amountField.text ?? ""),
+                      unitSegmentedControl.selectedSegmentIndex >= 0 else {
+                    print("Invalid input")
+                    return
+                }
+                let selectedUnit = unitOptions[unitSegmentedControl.selectedSegmentIndex]
+                print("Entered Amount: \(enteredAmount), Selected Unit: \(selectedUnit)")
+            }
+            alert.addButton("Cancel", action: {})
+
+            // Display the alert
+            alert.showEdit("Change Amount", subTitle: "Enter used amount and select units")
+        }
+    }
+
+
+
+
+
+
 
 
     

@@ -1,10 +1,3 @@
-//
-//  ChemicalInfoViewController.swift
-//  ChemicalInventory
-//
-//  Created by Alex Vasiliev on 11/18/24.
-//
-
 import UIKit
 
 class ChemicalInfoViewController: UIViewController {
@@ -15,57 +8,44 @@ class ChemicalInfoViewController: UIViewController {
     var unit: String = "g"
     var expirationDate: String = ""
 
-    var onEditTapped: (() -> Void)?
     var onEnterUsedAmountTapped: ((Double, String) -> Void)?
+    var onEditTapped: (() -> Void)?
 
-    private var amountTextField: UITextField!
-    private var unitPicker: UIPickerView!
-    private let units = ["g", "kg", "mg", "L", "mL", "uL"]
+    private var stackView: UIStackView!
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        print("ChemicalInfoViewController loaded with:")
+        print("Name: \(chemicalName), CAS: \(casNumber), Amount: \(amount), Unit: \(unit), Expiration: \(expirationDate)")
 
         setupView()
     }
 
     private func setupView() {
-        // Setup view appearance
         view.backgroundColor = .white
+        view.layer.cornerRadius = 12
 
-        // Add labels
+        // Create labels
         let nameLabel = createLabel(text: "Name: \(chemicalName)")
         let casLabel = createLabel(text: "CAS: \(casNumber)")
         let amountLabel = createLabel(text: "Remaining: \(amount) \(unit)")
         let expirationLabel = createLabel(text: "Expires on: \(expirationDate)")
 
-        // Add text field for entering amount
-        amountTextField = UITextField()
-        amountTextField.placeholder = "Enter amount used"
-        amountTextField.borderStyle = .roundedRect
-        amountTextField.keyboardType = .decimalPad
-
-        // Add picker for unit selection
-        unitPicker = UIPickerView()
-        unitPicker.dataSource = self
-        unitPicker.delegate = self
-        unitPicker.selectRow(units.firstIndex(of: unit) ?? 0, inComponent: 0, animated: false)
-
-        // Buttons
-        let submitButton = createButton(title: "Submit", action: #selector(submitAmount))
+        // Create buttons
+        let enterButton = createButton(title: "Enter Used Amount", action: #selector(enterUsedAmount))
         let editButton = createButton(title: "Edit", action: #selector(editChemical))
-        let cancelButton = createButton(title: "Cancel", action: #selector(closeView))
+        let cancelButton = createButton(title: "Cancel", action: #selector(closeDialog))
 
-        // Stack view for layout
-        let stackView = UIStackView(arrangedSubviews: [
-            nameLabel, casLabel, amountLabel, expirationLabel, amountTextField, unitPicker, submitButton, editButton, cancelButton
-        ])
+        // Stack view setup
+        stackView = UIStackView(arrangedSubviews: [nameLabel, casLabel, amountLabel, expirationLabel, enterButton, editButton, cancelButton])
         stackView.axis = .vertical
-        stackView.spacing = 10
+        stackView.spacing = 15
+        stackView.alignment = .fill
+        stackView.distribution = .equalSpacing
         stackView.translatesAutoresizingMaskIntoConstraints = false
-
         view.addSubview(stackView)
 
-        // Layout
+        // Apply constraints
         NSLayoutConstraint.activate([
             stackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             stackView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
@@ -79,6 +59,7 @@ class ChemicalInfoViewController: UIViewController {
         label.text = text
         label.font = .systemFont(ofSize: 16)
         label.numberOfLines = 0
+        label.textColor = .black
         return label
     }
 
@@ -86,48 +67,85 @@ class ChemicalInfoViewController: UIViewController {
         let button = UIButton(type: .system)
         button.setTitle(title, for: .normal)
         button.addTarget(self, action: action, for: .touchUpInside)
-        button.layer.cornerRadius = 8
         button.backgroundColor = .systemBlue
         button.setTitleColor(.white, for: .normal)
+        button.layer.cornerRadius = 8
         button.heightAnchor.constraint(equalToConstant: 44).isActive = true
         return button
     }
 
-    @objc private func submitAmount() {
-        guard let text = amountTextField.text, let usedAmount = Double(text) else {
-            print("Invalid input")
-            return
+    @objc private func enterUsedAmount() {
+        print("Enter Used Amount tapped")
+        
+        let alertController = UIAlertController(title: "Enter Used Amount", message: nil, preferredStyle: .alert)
+
+        // Add text field for amount input
+        alertController.addTextField { textField in
+            textField.placeholder = "Amount"
+            textField.keyboardType = .decimalPad
         }
-        let selectedUnit = units[unitPicker.selectedRow(inComponent: 0)]
-        onEnterUsedAmountTapped?(usedAmount, selectedUnit)
-        dismiss(animated: true)
+
+        // Add unit selection using UISegmentedControl
+        let unitOptions: [String] = unit == "g" || unit == "kg" || unit == "mg"
+            ? ["g", "kg", "mg"]
+            : ["mL", "L", "uL"]
+
+        let segmentedControl = UISegmentedControl(items: unitOptions)
+        segmentedControl.selectedSegmentIndex = unitOptions.firstIndex(of: unit) ?? 0
+        segmentedControl.translatesAutoresizingMaskIntoConstraints = false
+
+        // Wrap UISegmentedControl in a container view
+        let customView = UIView(frame: CGRect(x: 0, y: 0, width: 250, height: 40))
+        customView.addSubview(segmentedControl)
+
+        NSLayoutConstraint.activate([
+            segmentedControl.centerXAnchor.constraint(equalTo: customView.centerXAnchor),
+            segmentedControl.centerYAnchor.constraint(equalTo: customView.centerYAnchor)
+        ])
+
+        // Add the container view as a subview of the alert
+        alertController.view.addSubview(customView)
+
+        NSLayoutConstraint.activate([
+            customView.leadingAnchor.constraint(equalTo: alertController.view.leadingAnchor, constant: 16),
+            customView.trailingAnchor.constraint(equalTo: alertController.view.trailingAnchor, constant: -16),
+            customView.topAnchor.constraint(equalTo: alertController.view.bottomAnchor, constant: -60), // Adjust for spacing
+            customView.heightAnchor.constraint(equalToConstant: 50)
+        ])
+
+        // Save action
+        let saveAction = UIAlertAction(title: "Save", style: .default) { _ in
+            guard let textField = alertController.textFields?.first,
+                  let inputText = textField.text,
+                  let usedAmount = Double(inputText) else { return }
+
+            let selectedUnit = unitOptions[segmentedControl.selectedSegmentIndex]
+            print("Entered Amount: \(usedAmount) \(selectedUnit)")
+            self.onEnterUsedAmountTapped?(usedAmount, selectedUnit)
+        }
+
+        // Cancel action
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel)
+
+        alertController.addAction(saveAction)
+        alertController.addAction(cancelAction)
+
+        present(alertController, animated: true)
+    }
+
+
+    @objc private func unitChanged(_ sender: UISegmentedControl) {
+        print("Unit changed to \(sender.titleForSegment(at: sender.selectedSegmentIndex) ?? "")")
     }
 
     @objc private func editChemical() {
+        print("Edit tapped")
         onEditTapped?()
         dismiss(animated: true)
     }
 
-    @objc private func closeView() {
+    @objc private func closeDialog() {
+        print("Cancel tapped")
         dismiss(animated: true)
-    }
-}
-
-// MARK: - UIPickerView Data Source & Delegate
-extension ChemicalInfoViewController: UIPickerViewDataSource, UIPickerViewDelegate {
-    func numberOfComponents(in pickerView: UIPickerView) -> Int {
-        return 1
-    }
-
-    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-        return units.count
-    }
-
-    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
-        return units[row]
-    }
-
-    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-        // No action needed for now; handled on submission
     }
 }
