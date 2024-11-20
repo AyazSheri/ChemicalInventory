@@ -477,16 +477,8 @@ class ScanPageViewController: UIViewController {
                     ChemicalPopupManager.shared.showChemicalInfoPopup(chemicalInfo: chemicalInfo, in: self)
 
                 case .failure(let error):
-                    print("ERROR: \(error.localizedDescription)")
-
-                    // Safely create and present the alert
-                    let alert = UIAlertController(
-                        title: "Error",
-                        message: error.localizedDescription,
-                        preferredStyle: .alert
-                    )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
-                    self.present(alert, animated: true)
+                    print("DEBUG: Error received: \(error.errorMessage)")
+                    self.showAlert(title: "Error", message: error.errorMessage)
                 }
             }
         }
@@ -818,4 +810,12 @@ class ScanPageViewController: UIViewController {
     }
 
     
+}
+
+extension ScanPageViewController {
+    func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        self.present(alert, animated: true, completion: nil)
+    }
 }

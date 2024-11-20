@@ -51,7 +51,7 @@ class CheckChemical(Resource):
                 room_number = room.room_number if room else "Unknown Room"
                 return {
                     "alert": f"Please return this chemical to {room_number}, {building_name} {space_description or ''}".strip()
-                }, 200
+                }, 400
 
             # Chemical matches the room
             print(f"DEBUG: Chemical is in the correct room: {selected_room_id}")

@@ -121,10 +121,13 @@ class NetworkManager {
             case 404, 400:
                 if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                    let alertMessage = json["alert"] as? String {
-                    completion(.failure(.serverError(alertMessage)))
+                    print("DEBUG: Received alert from server: \(alertMessage)")
+                    completion(.failure(.serverError(alertMessage))) // Pass server alert as error
                 } else {
-                    completion(.failure(.dataParsingFailed("Error: Unable to parse server response")))
+                    print("DEBUG: Unable to parse error response from server")
+                    completion(.failure(.dataParsingFailed("Unable to parse server response for error 400/404")))
                 }
+
 
             default:
                 completion(.failure(.unexpectedStatusCode(httpResponse.statusCode)))
