@@ -1,0 +1,24 @@
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode files
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+*.xccheckout
+build/
+DerivedData/
+
+# Xcode temporary state
+*.xcuserstate
+
+# Swift Package Manager
+.build/
+
+# CocoaPods
+Pods/
+
