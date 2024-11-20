@@ -3,6 +3,48 @@ from flask_restful import Resource
 from datetime import datetime
 from db_models.models import db, Chemical, User, PI, Building, Room, Space
 
+from flask import request, jsonify
+from flask_restful import Resource
+from werkzeug.security import check_password_hash
+from db_models.models import db, User, PI, Room, Building
+
+# --- Login Route ---
+class LoginResource(Resource):
+    def post(self):
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+
+        # Validate user credentials
+        user = User.query.filter_by(email=email).first()
+        if user and user.check_password(password):
+            # Fetch PIs and associated room/building details
+            pi_data = []
+            for pi in user.pis:
+                rooms = Room.query.filter_by(pi_id=pi.id).all()
+                room_data = [
+                    {
+                        "room_id": room.id,
+                        "room_number": room.room_number,
+                        "building_name": Building.query.get(room.building_id).name
+                    }
+                    for room in rooms
+                ]
+                pi_data.append({
+                    "pi_id": pi.id,
+                    "pi_name": pi.name,
+                    "rooms": room_data
+                })
+
+            return jsonify({
+                "success": True,
+                "user_name": user.name,
+                "pis": pi_data
+            })
+
+        return jsonify({"success": False, "message": "Invalid email or password"}), 401
+
+
 # --- Routes for Chemicals ---
 class ChemicalListResource(Resource):
     def get(self):
@@ -201,6 +243,7 @@ class SpaceResource(Resource):
 
 # --- Add the new routes to your app ---
 def initialize_routes(api):
+    api.add_resource(LoginResource, '/login')
     api.add_resource(ChemicalListResource, '/chemicals')
     api.add_resource(ChemicalQueryResource, '/chemicals/query')
     api.add_resource(UserPIResource, '/users/<int:user_id>/pis')

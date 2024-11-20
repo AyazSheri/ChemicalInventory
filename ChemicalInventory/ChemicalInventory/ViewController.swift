@@ -30,6 +30,29 @@ class ViewController: UIViewController {
             }
     }
     
+    @IBAction func goToLoginPage(_ sender: Any) {
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+
+        if let loginVC = storyboard.instantiateViewController(withIdentifier: "LoginViewController") as? LoginViewController {
+            print("LoginViewController instantiated successfully")
+            navigationController?.pushViewController(loginVC, animated: true)
+        } else {
+            print("Failed to instantiate LoginViewController")
+        }
+    }
     
+    func logout() {
+        UserSession.shared.clearSession()
+        
+        // Navigate back to LoginView
+        if let loginVC = storyboard?.instantiateViewController(withIdentifier: "LoginViewController") as? LoginViewController {
+            self.navigationController?.setViewControllers([loginVC], animated: true)
+        }
+    }
+    
+    @IBAction func logoutTapped(_ sender: UIButton) {
+        logout()
+    }
+
 }
 
