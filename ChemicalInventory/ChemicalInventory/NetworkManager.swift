@@ -216,6 +216,33 @@ class NetworkManager {
         }
 
 
+    func deleteChemical(id: Int, completion: @escaping (Bool) -> Void) {
+            guard let url = URL(string: "\(baseURL)/chemicaldelete/\(id)") else {
+                print("DEBUG: Invalid URL for deleting chemical")
+                completion(false)
+                return
+            }
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "DELETE"
+
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    print("DEBUG: Error deleting chemical: \(error.localizedDescription)")
+                    completion(false)
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                    print("DEBUG: Failed to delete chemical: \(response.debugDescription)")
+                    completion(false)
+                    return
+                }
+
+                completion(true)
+            }
+            task.resume()
+        }
 
 
 }

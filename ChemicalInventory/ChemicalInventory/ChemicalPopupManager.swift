@@ -176,6 +176,52 @@ class ChemicalPopupManager {
                         }
                     }
                 }
+                
+                alert.addButton("Delete") {
+                    guard let id = chemicalInfo["id"] as? Int else {
+                        print("DEBUG: Missing 'id' for the chemical to delete")
+                        return
+                    }
+
+                    // Show confirmation alert
+                    let confirmationAlert = UIAlertController(
+                        title: "Confirm Delete",
+                        message: "Are you sure you want to delete this chemical? This action cannot be undone.",
+                        preferredStyle: .alert
+                    )
+
+                    confirmationAlert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+                    confirmationAlert.addAction(UIAlertAction(title: "Delete", style: .destructive, handler: { _ in
+                        // Proceed with deletion if user confirms
+                        NetworkManager.shared.deleteChemical(id: id) { success in
+                            DispatchQueue.main.async {
+                                if success {
+                                    print("DEBUG: Chemical deleted successfully")
+                                    let successAlert = UIAlertController(
+                                        title: "Deleted",
+                                        message: "Chemical has been successfully deleted.",
+                                        preferredStyle: .alert
+                                    )
+                                    successAlert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                                    viewController.present(successAlert, animated: true, completion: nil)
+                                } else {
+                                    print("DEBUG: Failed to delete chemical")
+                                    let errorAlert = UIAlertController(
+                                        title: "Error",
+                                        message: "Failed to delete the chemical. Please try again.",
+                                        preferredStyle: .alert
+                                    )
+                                    errorAlert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                                    viewController.present(errorAlert, animated: true, completion: nil)
+                                }
+                            }
+                        }
+                    }))
+
+                    viewController.present(confirmationAlert, animated: true, completion: nil)
+                }
+
+
 
                 alert.addButton("Cancel", action: {})
                 alert.showEdit("Edit Chemical", subTitle: "Modify details below")

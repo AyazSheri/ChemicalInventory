@@ -8,6 +8,27 @@ from flask_restful import Resource, reqparse
 from werkzeug.security import check_password_hash
 from db_models.models import db, User, PI, Room, Building
 
+class ChemicalDelete(Resource):
+    def delete(self, chemical_id):
+        print(f"DEBUG: Received DELETE request for chemical ID: {chemical_id}")
+
+        # Fetch the chemical by ID
+        chemical = Chemical.query.get(chemical_id)
+        if not chemical:
+            print(f"DEBUG: Chemical with ID {chemical_id} not found")
+            return {"message": "Chemical not found"}, 404
+
+        try:
+            db.session.delete(chemical)
+            db.session.commit()
+            print(f"DEBUG: Chemical with ID {chemical_id} deleted successfully")
+            return {"message": "Chemical deleted successfully"}, 200
+        except Exception as e:
+            db.session.rollback()
+            print(f"DEBUG: Error deleting chemical - {str(e)}")
+            return {"message": f"Error deleting chemical: {str(e)}"}, 500
+
+
 class ChemicalEdit(Resource):
     def put(self):
         print("DEBUG: Received PUT request for updating chemical")  # Debug start
@@ -405,6 +426,7 @@ class ChemicalsByRoom(Resource):
 
 # --- Add the new routes to your app ---
 def initialize_routes(api):
+    api.add_resource(ChemicalDelete, '/chemicaldelete/<int:chemical_id>')
     api.add_resource(ChemicalEdit, '/chemicals/update')
     api.add_resource(SpaceResource, '/rooms/<int:room_id>/spaces')
     api.add_resource(CheckChemical, '/scan/check_chemical')
