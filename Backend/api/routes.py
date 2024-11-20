@@ -145,7 +145,8 @@ class CheckChemical(Resource):
                     "expiration_date": chemical.expiration_date.strftime('%Y-%m-%d') if chemical.expiration_date else "N/A",
                     "room": f"{room.room_number}, {building_name}",
                     "room_id": chemical.room_id,
-                    "space": space_description or ""
+                    "space": space_description or "",
+                    "space_id": chemical.space_id
                 }
             }
             print(f"DEBUG: Returning chemical info: {response_data}")

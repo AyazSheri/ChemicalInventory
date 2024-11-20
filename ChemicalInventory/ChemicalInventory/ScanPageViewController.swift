@@ -503,6 +503,15 @@ class ScanPageViewController: UIViewController {
         present(scannerVC, animated: true)
     }
 
+    
+    
+    @IBAction func testBarcodeButtonTapped(_ sender: UIButton) {
+        let hardcodedBarcode = "0000000041"  // Replace with your desired hardcoded barcode value
+        print("DEBUG: Using hardcoded barcode: \(hardcodedBarcode)")
+        
+        // Call checkChemical with the hardcoded barcode
+        checkChemical(barcode: hardcodedBarcode)
+    }
 
 
     

@@ -124,6 +124,15 @@
                                     <action selector="logoutTapped:" destination="13P-ak-Xz9" eventType="touchUpInside" id="erW-l0-TLz"/>
                                 </connections>
                             </button>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Y5F-xc-XYK">
+                                <rect key="frame" x="140" y="588" width="91" height="35"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <state key="normal" title="Button"/>
+                                <buttonConfiguration key="configuration" style="tinted" title="testScan"/>
+                                <connections>
+                                    <action selector="testBarcodeButtonTapped:" destination="13P-ak-Xz9" eventType="touchUpInside" id="yfw-jU-mvq"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="8L1-a6-frn"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>

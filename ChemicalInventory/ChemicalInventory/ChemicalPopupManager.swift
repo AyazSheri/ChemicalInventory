@@ -45,7 +45,7 @@ class ChemicalPopupManager {
                 """
                 print("DEBUG: Popup message: \(message)")
                 alert.addButton("Use") {
-                    ChemicalPopupManager.shared.showChangeAmountPopup(currentAmount: amount, currentUnit: unit, in: viewController)
+                    ChemicalPopupManager.shared.showChangeAmountPopup(chemicalInfo: chemicalInfo, currentAmount: amount, currentUnit: unit, in: viewController)
                 }
                 alert.addButton("Edit") {
                     ChemicalPopupManager.shared.showEditChemicalPopup(chemicalInfo: chemicalInfo, in: viewController)
@@ -57,7 +57,7 @@ class ChemicalPopupManager {
         }
 
     // MARK: - Show Change Amount Popup
-    func showChangeAmountPopup(currentAmount: Double, currentUnit: String, in viewController: UIViewController) {
+    func showChangeAmountPopup(chemicalInfo: [String: Any], currentAmount: Double, currentUnit: String, in viewController: UIViewController) {
         DispatchQueue.main.async {
             let appearance = SCLAlertView.SCLAppearance(
                 showCloseButton: false,
@@ -65,7 +65,7 @@ class ChemicalPopupManager {
             )
             let alert = SCLAlertView(appearance: appearance)
 
-            let amountField = alert.addTextField("Enter Amount")
+            let amountField = alert.addTextField("Used Amount")
             amountField.keyboardType = .decimalPad
 
             let unitOptions = currentUnit == "mL" ? ["mL", "L", "uL"] : ["g", "kg", "mg"]
@@ -73,7 +73,7 @@ class ChemicalPopupManager {
             let container = UIView(frame: CGRect(x: 0, y: 0, width: containerWidth, height: 80))
             let unitSegmentedControl = UISegmentedControl(items: unitOptions)
             unitSegmentedControl.frame = CGRect(x: 20, y: 25, width: 200, height: 30)
-            unitSegmentedControl.selectedSegmentIndex = 0
+            unitSegmentedControl.selectedSegmentIndex = unitOptions.firstIndex(of: currentUnit) ?? 0
             container.addSubview(unitSegmentedControl)
 
             alert.customSubview = container
@@ -86,13 +86,42 @@ class ChemicalPopupManager {
                     return
                 }
                 let selectedUnit = unitOptions[unitSegmentedControl.selectedSegmentIndex]
-                print("Entered Amount: \(enteredAmount), Selected Unit: \(selectedUnit)")
+
+                // Ensure the unit matches the current unit for subtraction
+                if selectedUnit != currentUnit {
+                    print("Unit mismatch. Conversion required. Not implemented.")
+                    return
+                }
+
+                // Calculate new amount
+                let updatedAmount = currentAmount - enteredAmount
+                if updatedAmount < 0 {
+                    print("Entered amount exceeds available amount")
+                    return
+                }
+
+                // Update the chemical info dictionary
+                var updatedChemicalInfo = chemicalInfo
+                updatedChemicalInfo["amount"] = updatedAmount
+
+                print("DEBUG: New amount: \(updatedAmount), Selected Unit: \(selectedUnit)")
+                
+                // Call updateChemical method
+                NetworkManager.shared.updateChemical(chemicalInfo: updatedChemicalInfo) { success in
+                    if success {
+                        print("Chemical amount updated successfully")
+                    } else {
+                        print("Failed to update chemical amount")
+                    }
+                }
             }
+            
             alert.addButton("Cancel", action: {})
 
             alert.showEdit("Change Amount", subTitle: "Enter used amount and select units")
         }
     }
+
 
     // MARK: - Show Edit Chemical Popup
     func showEditChemicalPopup(chemicalInfo: [String: Any], in viewController: UIViewController) {
