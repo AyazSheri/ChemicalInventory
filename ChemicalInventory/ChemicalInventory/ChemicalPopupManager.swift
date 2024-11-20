@@ -97,66 +97,93 @@ class ChemicalPopupManager {
     // MARK: - Show Edit Chemical Popup
     func showEditChemicalPopup(chemicalInfo: [String: Any], in viewController: UIViewController) {
         guard let name = chemicalInfo["name"] as? String,
-              let casNumber = chemicalInfo["casNumber"] as? String,
+              let casNumber = chemicalInfo["cas_number"] as? String,
               let amount = chemicalInfo["amount"] as? Double,
               let unit = chemicalInfo["unit"] as? String,
-              let expirationDate = chemicalInfo["expirationDate"] as? String,
-              let spacesArray = chemicalInfo["spaces"] as? [String] else {
+              let expirationDate = chemicalInfo["expiration_date"] as? String,
+              let id = chemicalInfo["id"] as? Int,
+              let roomId = chemicalInfo["room_id"] as? Int else {
             print("Error: Missing fields in chemicalInfo.")
             return
         }
 
-        DispatchQueue.main.async {
-            let appearance = SCLAlertView.SCLAppearance(
-                showCloseButton: false,
-                buttonsLayout: .vertical
-            )
-            let alert = SCLAlertView(appearance: appearance)
+        let spaceName = (chemicalInfo["space"] as? String)?.components(separatedBy: " ").first ?? ""
 
-            let nameField = alert.addTextField("Name")
-            nameField.text = name
+        var spaces: [(name: String, id: Int)] = []  // To store spaces and their IDs
 
-            let casNumberField = alert.addTextField("CAS Number")
-            casNumberField.text = casNumber
+        // Fetch spaces for the given room ID
+        NetworkManager.shared.fetchSpaces(for: roomId) { fetchedSpaces in
+            spaces = fetchedSpaces.map { ($0.name, $0.id) }  // Convert [Space] to [(name: String, id: Int)]
 
-            let amountField = alert.addTextField("Amount")
-            amountField.text = "\(amount)"
-            amountField.keyboardType = .decimalPad
+            DispatchQueue.main.async {
+                let appearance = SCLAlertView.SCLAppearance(
+                    showCloseButton: false,
+                    buttonsLayout: .vertical
+                )
+                let alert = SCLAlertView(appearance: appearance)
 
-            let expirationDateField = alert.addTextField("Expiration Date")
-            expirationDateField.text = expirationDate
+                let nameField = alert.addTextField("Name")
+                nameField.text = name
 
-            let unitField = alert.addTextField("Unit")
-            unitField.text = unit
-            unitField.addTarget(self, action: #selector(self.unitFieldTapped(_:)), for: .editingDidBegin)
-            unitField.inputView = UIView()
+                let casNumberField = alert.addTextField("CAS Number")
+                casNumberField.text = casNumber
 
-            let spaceField = alert.addTextField("Space")
-            spaceField.text = spacesArray.first ?? ""
-            spaceField.addTarget(self, action: #selector(self.spaceFieldTapped(_:)), for: .editingDidBegin)
-            spaceField.inputView = UIView()
+                let amountField = alert.addTextField("Amount")
+                amountField.text = "\(amount)"
+                amountField.keyboardType = .decimalPad
 
-            alert.addButton("Save") {
-                print("Save button tapped.")
-                let editedName = nameField.text ?? ""
-                let editedCASNumber = casNumberField.text ?? ""
-                let editedAmount = Double(amountField.text ?? "") ?? 0.0
-                let editedExpirationDate = expirationDateField.text ?? ""
-                print("Updated Chemical Info: \(editedName), \(editedCASNumber), \(editedAmount), \(editedExpirationDate)")
+                let expirationDateField = alert.addTextField("Expiration Date")
+                expirationDateField.text = expirationDate
+
+                let unitField = alert.addTextField("Unit")
+                unitField.text = unit
+                unitField.addTarget(self, action: #selector(self.unitFieldTapped(_:)), for: .editingDidBegin)
+                unitField.inputView = UIView()
+
+                let spaceField = alert.addTextField("Space")
+                spaceField.text = spaceName
+                spaceField.accessibilityElements = spaces  // Pass pre-fetched spaces
+                spaceField.addTarget(self, action: #selector(self.spaceFieldTapped(_:)), for: .editingDidBegin)
+                spaceField.inputView = UIView()
+
+                alert.addButton("Save") {
+                    guard let editedName = nameField.text,
+                          let editedCASNumber = casNumberField.text,
+                          let editedAmount = Double(amountField.text ?? ""),
+                          let editedExpirationDate = expirationDateField.text else {
+                        print("Invalid input")
+                        return
+                    }
+
+                    let selectedSpaceName = spaceField.text ?? ""
+                    let selectedSpaceId = spaces.first(where: { $0.name == selectedSpaceName })?.id ?? -1
+
+                    let updatedChemical = [
+                        "id": id,
+                        "name": editedName,
+                        "cas_number": editedCASNumber,
+                        "amount": editedAmount,
+                        "unit": unitField.text ?? unit,
+                        "expiration_date": editedExpirationDate,
+                        "space_id": selectedSpaceId
+                    ]
+
+                    NetworkManager.shared.updateChemical(chemicalInfo: updatedChemical) { success in
+                        if success {
+                            print("Chemical updated successfully")
+                        } else {
+                            print("Failed to update chemical")
+                        }
+                    }
+                }
+
+                alert.addButton("Cancel", action: {})
+                alert.showEdit("Edit Chemical", subTitle: "Modify details below")
             }
-
-            alert.addButton("Delete") {
-                print("Chemical deleted!")
-            }
-
-            alert.addButton("Print") {
-                print("Print button tapped. Chemical Information:")
-            }
-
-            alert.addButton("Cancel", action: {})
-            alert.showEdit("Edit Chemical", subTitle: "Modify details below")
         }
+
     }
+
     
     // MARK: - Dropdown Handlers
     @objc private func unitFieldTapped(_ sender: UITextField) {
@@ -175,10 +202,19 @@ class ChemicalPopupManager {
             print("Error: Unable to find the root view controller.")
             return
         }
-        ChemicalPopupManager.shared.showSpaceDropdown(from: viewController) { selectedValue in
+
+        // Assume spaces are pre-fetched in showEditChemicalPopup and passed to this method
+        guard let spaces = sender.accessibilityElements as? [(name: String, id: Int)] else {
+            print("Error: Spaces data not available")
+            return
+        }
+        print("DEBUG: Spaces for dropdown: \(spaces)")  // Debug the spaces passed to dropdown
+
+        ChemicalPopupManager.shared.showSpaceDropdown(from: viewController, spaces: spaces) { selectedValue in
             sender.text = selectedValue // Update the text field
         }
     }
+
 
     
     // MARK: - Dropdown Logic
@@ -196,17 +232,20 @@ class ChemicalPopupManager {
         viewController.present(alert, animated: true)
     }
 
-    func showSpaceDropdown(from viewController: UIViewController, completion: @escaping (String) -> Void) {
+    func showSpaceDropdown(from viewController: UIViewController, spaces: [(name: String, id: Int)], completion: @escaping (String) -> Void) {
+        print("DEBUG: Received spaces: \(spaces)")  // Debug the spaces array
+
+        
         let alert = UIAlertController(title: "Select Space", message: nil, preferredStyle: .actionSheet)
-        let spaces = ["Storage Room 1", "Storage Room 2", "Lab A", "Lab B"]
 
         for space in spaces {
-            alert.addAction(UIAlertAction(title: space, style: .default, handler: { _ in
-                completion(space)
+            alert.addAction(UIAlertAction(title: space.name, style: .default, handler: { _ in
+                completion(space.name)
             }))
         }
 
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
         viewController.present(alert, animated: true)
     }
+
 }

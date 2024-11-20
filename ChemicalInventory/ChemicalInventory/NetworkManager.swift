@@ -10,8 +10,8 @@ import Foundation
 class NetworkManager {
     static let shared = NetworkManager()
     //private var baseURL = "http://127.0.0.1:5000" // local host
-    //private var baseURL = "http://192.168.1.31:5000" // machine ip
-    private var baseURL = "https://mobile-chemical-inventory-40584a411faf.herokuapp.com/" // online server
+    private var baseURL = "http://192.168.1.31:5000" // machine ip
+    //private var baseURL = "https://mobile-chemical-inventory-40584a411faf.herokuapp.com/" // online server
     func setBaseURL(to url: String) {
         baseURL = url
     }
@@ -38,6 +38,12 @@ class NetworkManager {
             }
         }
     }
+    
+    struct Space: Decodable {
+        let id: Int
+        let name: String
+    }
+
 
 
 
@@ -136,5 +142,80 @@ class NetworkManager {
         }
         task.resume()
     }
+    
+    func fetchSpaces(for roomId: Int, completion: @escaping ([Space]) -> Void) {
+        guard let url = URL(string: "\(baseURL)/rooms/\(roomId)/spaces") else {
+            print("Invalid URL for fetching spaces")
+            completion([])
+            return
+        }
+
+        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                print("Error fetching spaces: \(error)")
+                completion([])
+                return
+            }
+
+            guard let data = data else {
+                print("No data received")
+                completion([])
+                return
+            }
+
+            do {
+                let decodedSpaces = try JSONDecoder().decode([Space].self, from: data)
+                completion(decodedSpaces)
+            } catch {
+                print("Error decoding spaces: \(error)")
+                completion([])
+            }
+        }
+        task.resume()
+    }
+    
+    func updateChemical(chemicalInfo: [String: Any], completion: @escaping (Bool) -> Void) {
+            guard let url = URL(string: "\(baseURL)/chemicals/update") else {
+                print("Invalid URL for updating chemical")
+                completion(false)
+                return
+            }
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "PUT"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            do {
+                let body = try JSONSerialization.data(withJSONObject: chemicalInfo, options: [])
+                request.httpBody = body
+            } catch {
+                print("Error serializing JSON: \(error)")
+                completion(false)
+                return
+            }
+        
+        print("DEBUG: Payload being sent to backend: \(chemicalInfo)")
+
+
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    print("Error updating chemical: \(error)")
+                    completion(false)
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                    print("Failed to update chemical: \(response.debugDescription)")
+                    completion(false)
+                    return
+                }
+
+                completion(true)
+            }
+            task.resume()
+        }
+
+
+
 
 }

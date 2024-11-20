@@ -4,9 +4,67 @@ from datetime import datetime
 from db_models.models import db, Chemical, User, PI, Building, Room, Space
 
 from flask import request, jsonify
-from flask_restful import Resource
+from flask_restful import Resource, reqparse
 from werkzeug.security import check_password_hash
 from db_models.models import db, User, PI, Room, Building
+
+class ChemicalEdit(Resource):
+    def put(self):
+        print("DEBUG: Received PUT request for updating chemical")  # Debug start
+        print(f"DEBUG: Request headers: {request.headers}") 
+
+        # Define the expected fields in the request
+        parser = reqparse.RequestParser()
+        parser.add_argument('id', type=int, required=True, help="Chemical ID is required")
+        parser.add_argument('name', type=str, required=True, help="Chemical name is required")
+        parser.add_argument('cas_number', type=str, required=True, help="CAS number is required")
+        parser.add_argument('amount', type=float, required=True, help="Amount is required")
+        parser.add_argument('unit', type=str, required=True, help="Unit is required")
+        parser.add_argument('expiration_date', type=str, required=True, help="Expiration date is required")
+        parser.add_argument('space_id', type=int, required=True, help="Space ID is required")
+
+        try:
+            args = parser.parse_args()
+            print(f"DEBUG: Parsed arguments: {args}")  # Debug parsed arguments
+        except Exception as e:
+            print(f"DEBUG: Failed to parse arguments - {str(e)}")  # Debug parsing failure
+            return {'message': f'Error parsing arguments: {str(e)}'}, 400
+
+        # Fetch the chemical by ID
+        chemical = Chemical.query.get(args['id'])
+        if not chemical:
+            print(f"DEBUG: Chemical with ID {args['id']} not found")  # Debug chemical lookup
+            return {'message': 'Chemical not found'}, 404
+        
+        # Convert expiration_date from string to datetime.date
+        try:
+            expiration_date = datetime.strptime(args['expiration_date'], '%Y-%m-%d').date()
+        except ValueError as e:
+            print(f"DEBUG: Invalid date format for expiration_date - {str(e)}")
+            return {'message': 'Invalid expiration date format. Use YYYY-MM-DD'}, 400
+
+        # Update chemical fields
+        try:
+            chemical.name = args['name']
+            chemical.cas_number = args['cas_number']
+            chemical.amount = args['amount']
+            chemical.unit = args['unit']
+            chemical.expiration_date = expiration_date
+            chemical.space_id = args['space_id']
+            print(f"DEBUG: Updated chemical object: {chemical}")  # Debug updated chemical object
+
+            db.session.commit()
+            print("DEBUG: Successfully committed changes to the database")  # Debug success
+            return {'message': 'Chemical updated successfully'}, 200
+        except Exception as e:
+            db.session.rollback()
+            print(f"DEBUG: Error updating chemical - {str(e)}")  # Debug database failure
+            return {'message': f'Error updating chemical: {str(e)}'}, 500
+
+class SpaceResource(Resource):
+    def get(self, room_id):
+        spaces = Space.query.filter_by(room_id=room_id).all()
+        return [{"id": space.id, "name": space.description} for space in spaces], 200
 
 class CheckChemical(Resource):
     def post(self):
@@ -57,6 +115,7 @@ class CheckChemical(Resource):
             print(f"DEBUG: Chemical is in the correct room: {selected_room_id}")
             response_data = {
                 "chemical_info": {
+                    "id": chemical.id,
                     "name": chemical.name,
                     "cas_number": chemical.cas_number,
                     "barcode": chemical.barcode,
@@ -64,6 +123,7 @@ class CheckChemical(Resource):
                     "unit": chemical.unit,
                     "expiration_date": chemical.expiration_date.strftime('%Y-%m-%d') if chemical.expiration_date else "N/A",
                     "room": f"{room.room_number}, {building_name}",
+                    "room_id": chemical.room_id,
                     "space": space_description or ""
                 }
             }
@@ -298,7 +358,7 @@ class RoomResource(Resource):
         return jsonify({'id': new_room.id, 'room_number': new_room.room_number})
 
 # --- Route to create Spaces ---
-class SpaceResource(Resource):
+class SpaceResourceFull(Resource):
     def post(self):
         data = request.get_json()
         new_space = Space(
@@ -345,6 +405,8 @@ class ChemicalsByRoom(Resource):
 
 # --- Add the new routes to your app ---
 def initialize_routes(api):
+    api.add_resource(ChemicalEdit, '/chemicals/update')
+    api.add_resource(SpaceResource, '/rooms/<int:room_id>/spaces')
     api.add_resource(CheckChemical, '/scan/check_chemical')
     api.add_resource(LoginResource, '/login')
     api.add_resource(ChemicalListResource, '/chemicals')
@@ -356,6 +418,6 @@ def initialize_routes(api):
     api.add_resource(UserListResource, '/users/all')  
     api.add_resource(BuildingResource, '/buildings')
     api.add_resource(RoomResource, '/rooms')
-    api.add_resource(SpaceResource, '/spaces')
+    api.add_resource(SpaceResourceFull, '/spaces')
     api.add_resource(UserPIAssociationResource, '/users/<int:user_id>/pis/<int:pi_id>')
     api.add_resource(ChemicalsByRoom, '/chemicals/room/<int:room_id>')
