@@ -8,6 +8,76 @@ from flask_restful import Resource
 from werkzeug.security import check_password_hash
 from db_models.models import db, User, PI, Room, Building
 
+class CheckChemical(Resource):
+    def post(self):
+        try:
+            # Parse request data
+            data = request.get_json()
+            barcode = data.get('barcode')
+            selected_room_id = data.get('selected_room_id')
+
+            if not barcode or not selected_room_id:
+                print("DEBUG: Missing barcode or selected_room_id in request")
+                return {"error": "barcode and selected_room_id are required"}, 400
+
+            print(f"DEBUG: Received barcode: {barcode}, selected_room_id: {selected_room_id}")
+
+            # Query chemical by barcode
+            chemical = Chemical.query.filter_by(barcode=barcode).first()
+
+            if not chemical:
+                print(f"DEBUG: Chemical with barcode {barcode} not found")
+                return {"alert": "Sorry, that chemical is not found"}, 404
+
+            print(f"DEBUG: Found chemical: {chemical}")
+
+            # Fetch the associated Room
+            room = Room.query.get(chemical.room_id)
+            if not room:
+                print(f"DEBUG: Room with ID {chemical.room_id} not found")
+                return {"error": "Room not found for this chemical"}, 404
+
+            # Fetch the associated Building
+            building = Building.query.get(room.building_id)
+            building_name = building.name if building else "Unknown Building"
+
+            # Fetch the associated Space
+            space = chemical.space
+            space_description = space.description if space else None
+
+            # Check if the room matches
+            if chemical.room_id != selected_room_id:
+                print(f"DEBUG: Room mismatch for chemical. Expected {selected_room_id}, found {chemical.room_id}")
+                room_number = room.room_number if room else "Unknown Room"
+                return {
+                    "alert": f"Please return this chemical to {room_number}, {building_name} {space_description or ''}".strip()
+                }, 200
+
+            # Chemical matches the room
+            print(f"DEBUG: Chemical is in the correct room: {selected_room_id}")
+            response_data = {
+                "chemical_info": {
+                    "name": chemical.name,
+                    "cas_number": chemical.cas_number,
+                    "barcode": chemical.barcode,
+                    "amount": chemical.amount,
+                    "unit": chemical.unit,
+                    "expiration_date": chemical.expiration_date.strftime('%Y-%m-%d') if chemical.expiration_date else "N/A",
+                    "room": f"{room.room_number}, {building_name}",
+                    "space": space_description or ""
+                }
+            }
+            print(f"DEBUG: Returning chemical info: {response_data}")
+            return response_data, 200
+
+        except Exception as e:
+            print(f"ERROR: Exception occurred - {str(e)}")
+            return {"error": f"Internal server error: {str(e)}"}, 500
+
+
+
+
+
 # --- Login Route ---
 class LoginResource(Resource):
     def post(self):
@@ -241,8 +311,41 @@ class SpaceResource(Resource):
         db.session.commit()
         return jsonify({'id': new_space.id, 'description': new_space.description})
 
+class ChemicalsByRoom(Resource):
+    """
+    RESTful resource to handle retrieving chemicals by room ID.
+    """
+
+    def get(self, room_id):
+        """
+        Retrieve a list of chemicals associated with the given room_id.
+        """
+        try:
+            # Query the database for chemicals with the specified room_id
+            chemicals = Chemical.query.filter_by(room_id=room_id).all()
+
+            if not chemicals:
+                return {"message": "No chemicals found for the given room ID"}, 404
+
+            # Format the response
+            chemical_list = [
+                {
+                    "room_id": chemical.room_id,
+                    "barcode": chemical.barcode,
+                    "name": chemical.name
+                }
+                for chemical in chemicals
+            ]
+
+            return {"chemicals": chemical_list}, 200
+
+        except Exception as e:
+            return {"error": str(e)}, 500
+
+
 # --- Add the new routes to your app ---
 def initialize_routes(api):
+    api.add_resource(CheckChemical, '/scan/check_chemical')
     api.add_resource(LoginResource, '/login')
     api.add_resource(ChemicalListResource, '/chemicals')
     api.add_resource(ChemicalQueryResource, '/chemicals/query')
@@ -255,4 +358,4 @@ def initialize_routes(api):
     api.add_resource(RoomResource, '/rooms')
     api.add_resource(SpaceResource, '/spaces')
     api.add_resource(UserPIAssociationResource, '/users/<int:user_id>/pis/<int:pi_id>')
-
+    api.add_resource(ChemicalsByRoom, '/chemicals/room/<int:room_id>')

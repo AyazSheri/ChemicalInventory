@@ -37,12 +37,16 @@ class LoginViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        print("LoginViewController loaded.")
+        print("isLoggedIn: \(UserSession.shared.isLoggedIn), userName: \(UserSession.shared.userName ?? "nil")")
+
         if UserSession.shared.isLoggedIn {
-            // Navigate to ScanPageViewController
-            if let scanPageVC = storyboard?.instantiateViewController(withIdentifier: "ScanPageViewController") as? ScanPageViewController {
-                navigationController?.setViewControllers([scanPageVC], animated: false)
-            }
+            print("User is already logged in. Navigating to ScanPageViewController.")
+            navigateToScanPage()
+            return
         }
+
         view.backgroundColor = .systemBackground
         setupUI()
     }
@@ -88,11 +92,7 @@ class LoginViewController: UIViewController {
             DispatchQueue.main.async {
                 if success {
                     print("Login Successful: \(UserSession.shared.userName ?? "")")
-
-                    // Navigate to ScanPage
-                    if let scanPageVC = self.storyboard?.instantiateViewController(withIdentifier: "ScanPageViewController") as? ScanPageViewController {
-                        self.navigationController?.setViewControllers([scanPageVC], animated: true)
-                    }
+                    self.navigateToScanPage()
                 } else {
                     print(errorMessage ?? "Login failed")
                     let alert = UIAlertController(title: "Error", message: errorMessage ?? "An error occurred", preferredStyle: .alert)
@@ -103,6 +103,9 @@ class LoginViewController: UIViewController {
         }
     }
 
-
-
+    private func navigateToScanPage() {
+        if let scanPageVC = storyboard?.instantiateViewController(withIdentifier: "ScanPageViewController") as? ScanPageViewController {
+            navigationController?.setViewControllers([scanPageVC], animated: true)
+        }
+    }
 }
