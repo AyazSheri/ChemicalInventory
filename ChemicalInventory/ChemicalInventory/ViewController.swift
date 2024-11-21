@@ -4,10 +4,11 @@
 //
 //  Created by Alex Vasiliev on 11/17/24.
 //
+import SwiftUI
 
 import UIKit
 
-class ViewController: UIViewController {
+class ViewController: BaseViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()

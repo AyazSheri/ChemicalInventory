@@ -8,7 +8,7 @@
 import UIKit
 import SCLAlertView
 
-class ScanPageViewController: UIViewController {
+class ScanPageViewController: BaseViewController {
     // Outlets for UI Elements
     @IBOutlet weak var nameLabel: UILabel!
     @IBOutlet weak var piButton: UIButton!
@@ -88,6 +88,10 @@ class ScanPageViewController: UIViewController {
         roomLabel.textAlignment = .left
         roomLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(roomLabel)
+        
+        piLabel.layer.zPosition = -1
+        roomLabel.layer.zPosition = -1
+
         
         // Ensure Scan button is centered dynamically
         scanButton.translatesAutoresizingMaskIntoConstraints = false
