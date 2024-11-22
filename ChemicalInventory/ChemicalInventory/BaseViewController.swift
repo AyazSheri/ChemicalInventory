@@ -139,9 +139,9 @@ class BaseViewController: UIViewController {
 
         switch destination {
         case "Scan":
-            navigateToScanPage() // Use the custom method for Scan navigation
-        case "Settings":
-            print("DEBUG: Settings option selected")
+            navigateToScanPage() 
+        case "AddChemical":
+            navigateToAddChemical()
         case "Logout":
                 logout()
         default:
@@ -158,6 +158,15 @@ class BaseViewController: UIViewController {
             navigationController?.setViewControllers([scanPageVC], animated: true)
         } else {
             print("DEBUG: Failed to instantiate ScanPageViewController")
+        }
+    }
+    
+    private func navigateToAddChemical() {
+        if let addChemicalVC = storyboard?.instantiateViewController(withIdentifier: "AddChemicalViewController") as? AddChemicalViewController {
+            print("DEBUG: Navigating to AddChemicalViewController")
+            navigationController?.setViewControllers([addChemicalVC], animated: true)
+        } else {
+            print("DEBUG: Failed to instantiate AddChemicalViewController")
         }
     }
     

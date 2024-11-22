@@ -10,8 +10,8 @@ import Foundation
 class NetworkManager {
     static let shared = NetworkManager()
     //private var baseURL = "http://127.0.0.1:5000" // local host
-    private var baseURL = "http://192.168.1.31:5000" // machine ip
-    //private var baseURL = "https://mobile-chemical-inventory-40584a411faf.herokuapp.com/" // online server
+    //private var baseURL = "http://192.168.1.31:5000" // machine ip
+    private var baseURL = "https://mobile-chemical-inventory-40584a411faf.herokuapp.com/" // online server
     func setBaseURL(to url: String) {
         baseURL = url
     }

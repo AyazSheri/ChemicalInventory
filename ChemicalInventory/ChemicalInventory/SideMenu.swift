@@ -23,10 +23,10 @@ struct Sidebar: View {
                     .frame(maxWidth: .infinity, alignment: .leading) // Ensure left alignment
             }
             Button(action: {
-                onNavigate?("Settings")
+                onNavigate?("AddChemical")
                 isMenuOpen = false // Close menu
             }) {
-                Text("Settings")
+                Text("Add Chemical")
                     .font(.headline)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, alignment: .leading) // Ensure left alignment

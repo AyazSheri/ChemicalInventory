@@ -148,6 +148,66 @@
             </objects>
             <point key="canvasLocation" x="1820.6106870229007" y="-17.605633802816904"/>
         </scene>
+        <!--Add Chemical View Controller-->
+        <scene sceneID="Bxv-Fy-W3A">
+            <objects>
+                <viewController storyboardIdentifier="AddChemicalViewController" id="rkl-9h-SPu" customClass="AddChemicalViewController" customModule="ChemicalInventory" customModuleProvider="target" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="4HK-of-VAy">
+                        <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Name: " lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ZT1-75-9zH">
+                                <rect key="frame" x="31" y="109" width="300" height="21"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="s86-MD-3J7">
+                                <rect key="frame" x="31" y="179" width="300" height="35"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <state key="normal" title="Button"/>
+                                <buttonConfiguration key="configuration" style="plain" titleAlignment="automatic">
+                                    <attributedString key="attributedTitle">
+                                        <fragment content="PI: "/>
+                                    </attributedString>
+                                </buttonConfiguration>
+                                <connections>
+                                    <action selector="togglePiDropdown:" destination="rkl-9h-SPu" eventType="touchUpInside" id="3vW-WO-LG7"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="MaE-P2-erq">
+                                <rect key="frame" x="31" y="258" width="300" height="35"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <state key="normal" title="Button"/>
+                                <buttonConfiguration key="configuration" style="plain" title="Room: "/>
+                                <connections>
+                                    <action selector="toggleRoomDropdown:" destination="rkl-9h-SPu" eventType="touchUpInside" id="8Rh-Bg-Nsp"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="0hc-sO-Som">
+                                <rect key="frame" x="142" y="748" width="108" height="35"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <state key="normal" title="Button"/>
+                                <buttonConfiguration key="configuration" style="filled" title="Scan Label"/>
+                                <connections>
+                                    <action selector="scanLabelButtonTapped:" destination="rkl-9h-SPu" eventType="touchUpInside" id="QsO-dR-lDH"/>
+                                </connections>
+                            </button>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="MHq-pm-DLa"/>
+                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                    </view>
+                    <connections>
+                        <outlet property="nameLabel" destination="ZT1-75-9zH" id="eVH-Ru-AxT"/>
+                        <outlet property="piButton" destination="s86-MD-3J7" id="N5L-yT-Sdm"/>
+                        <outlet property="roomButton" destination="MaE-P2-erq" id="qnE-te-ved"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="nPu-5E-u5r" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="2829" y="-3"/>
+        </scene>
         <!--Navigation Controller-->
         <scene sceneID="g9e-dl-MA7">
             <objects>

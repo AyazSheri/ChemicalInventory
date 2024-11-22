@@ -1,19 +1,19 @@
 //
-//  ScanPageViewController.swift
+//  AddChemicalViewController.swift
 //  ChemicalInventory
 //
-//  Created by Alex Vasiliev on 11/17/24.
+//  Created by Alex Vasiliev on 11/21/24.
 //
 
 import UIKit
 import SCLAlertView
 
-class ScanPageViewController: BaseViewController {
+class AddChemicalViewController: BaseViewController {
     // Outlets for UI Elements
     @IBOutlet weak var nameLabel: UILabel!
     @IBOutlet weak var piButton: UIButton!
     @IBOutlet weak var roomButton: UIButton!
-    @IBOutlet weak var scanButton: UIButton!
+    
     
     // Data for Dropdowns
     var piList: [String] = []
@@ -21,10 +21,20 @@ class ScanPageViewController: BaseViewController {
     var selectedPIIndex: Int = 0 // Track selected PI
     var selectedRoomIndex: Int = 0 // Track selected Room
     
-
+    
     // Dropdown Views
     var piDropdownView: UIView?
     var roomDropdownView: UIView?
+    
+    // New UI Elements
+    private var barcodeTextField: UITextField!
+    private var nameTextField: UITextField!
+    private var casNumberTextField: UITextField!
+    private var amountTextField: UITextField!
+    private var expirationDateTextField: UITextField!
+    private var spaceTextField: UITextField!
+    private var spaceData: [(name: String, id: Int)] = [] // To store spaces
+
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -72,15 +82,7 @@ class ScanPageViewController: BaseViewController {
         piLabel.layer.zPosition = -1
         roomLabel.layer.zPosition = -1
 
-        
-        // Ensure Scan button is centered dynamically
-        scanButton.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            scanButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            scanButton.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: 50),
-            scanButton.widthAnchor.constraint(equalToConstant: 150),
-            scanButton.heightAnchor.constraint(equalToConstant: 50)
-        ])
+    
 
         
         // Add constraints for alignment
@@ -113,6 +115,9 @@ class ScanPageViewController: BaseViewController {
         // Style buttons and set initial titles
         setupButton(button: piButton, initialTitle: piList[selectedPIIndex])
         setupButton(button: roomButton, initialTitle: roomList[selectedRoomIndex])
+        
+        addDynamicFields()
+
     }
     
     
@@ -160,6 +165,125 @@ class ScanPageViewController: BaseViewController {
         button.translatesAutoresizingMaskIntoConstraints = false
     }
     
+    private func addDynamicFields() {
+        let labels = ["Barcode:", "Name:", "Cas Number:", "Amount:", "Expiration Date:", "Space:"]
+        var previousView: UIView = roomButton // Start below roomButton
+
+        for labelText in labels {
+            let label = UILabel()
+            label.text = labelText
+            label.translatesAutoresizingMaskIntoConstraints = false
+            label.font = UIFont.systemFont(ofSize: 16)
+            label.textAlignment = .left
+            view.addSubview(label)
+
+            let textField = UITextField()
+            textField.borderStyle = .roundedRect
+            textField.translatesAutoresizingMaskIntoConstraints = false
+            textField.font = UIFont.systemFont(ofSize: 16)
+            view.addSubview(textField)
+
+            switch labelText {
+            case "Barcode:":
+                barcodeTextField = textField
+                // Disable keyboard input
+                barcodeTextField.inputView = UIView()
+                barcodeTextField.addTarget(self, action: #selector(openBarcodeScannerFromTextField), for: .editingDidBegin)
+            case "Name:":
+                nameTextField = textField
+            case "Cas Number:":
+                casNumberTextField = textField
+            case "Amount:":
+                amountTextField = textField
+            case "Expiration Date:":
+                expirationDateTextField = textField
+            case "Space:":
+                spaceTextField = textField
+                // Disable keyboard input
+                spaceTextField.inputView = UIView()
+                spaceTextField.addTarget(self, action: #selector(spaceFieldTapped), for: .editingDidBegin)
+            default:
+                break
+            }
+
+            NSLayoutConstraint.activate([
+                label.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+                label.topAnchor.constraint(equalTo: previousView.bottomAnchor, constant: 20),
+                label.widthAnchor.constraint(lessThanOrEqualToConstant: 100),
+
+                textField.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 10),
+                textField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+                textField.centerYAnchor.constraint(equalTo: label.centerYAnchor),
+                textField.heightAnchor.constraint(equalToConstant: 40)
+            ])
+
+            previousView = label
+        }
+    }
+    
+    @objc private func openBarcodeScannerFromTextField() {
+        let scannerVC = BarcodeScannerViewController()
+        scannerVC.modalPresentationStyle = .fullScreen
+        scannerVC.onBarcodeScanned = { [weak self] barcode in
+            guard let self = self else { return }
+            scannerVC.dismiss(animated: true) {
+                // Debug log for scanned barcode
+                print("DEBUG: Scanned barcode: \(barcode)")
+
+                // Set the barcode in the text field
+                self.barcodeTextField.text = barcode
+            }
+        }
+        present(scannerVC, animated: true)
+    }
+
+    
+    @objc private func spaceFieldTapped() {
+        // Ensure selectedRoomIndex is within bounds of the roomList array
+        guard selectedRoomIndex >= 0 && selectedRoomIndex < roomList.count else {
+            print("No room selected")
+            return
+        }
+
+        // Retrieve the selected room based on the index
+        let selectedRoomName = roomList[selectedRoomIndex] // E.g., "3329, Harris, Rangel and Martinez"
+        let selectedRoomNumber = selectedRoomName.split(separator: ",").first?.trimmingCharacters(in: .whitespaces) ?? ""
+        
+        // Get the room ID for the selected PI and room
+        let roomId = getRoomID(for: piList[selectedPIIndex], roomNumber: selectedRoomNumber)
+        guard let validRoomId = roomId else {
+            print("Room ID not found for the selected room")
+            return
+        }
+
+        // Fetch spaces for the valid room ID
+        NetworkManager.shared.fetchSpaces(for: validRoomId) { spaces in
+            DispatchQueue.main.async {
+                self.spaceData = spaces.map { ($0.name, $0.id) }
+                self.showSpaceDropdown()
+            }
+        }
+    }
+
+    
+    private func showSpaceDropdown() {
+        guard !spaceData.isEmpty else {
+            print("No spaces available for dropdown")
+            return
+        }
+
+        let alert = UIAlertController(title: "Select Space", message: nil, preferredStyle: .actionSheet)
+        for space in spaceData {
+            alert.addAction(UIAlertAction(title: space.name, style: .default, handler: { _ in
+                self.spaceTextField.text = space.name
+            }))
+        }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        present(alert, animated: true)
+    }
+
+
+
     
     @objc private func optionSelected(_ sender: UIButton) {
         guard let dropdownView = sender.superview else { return }
@@ -431,94 +555,37 @@ class ScanPageViewController: BaseViewController {
         }
         return roomID
     }
-
-
     
-    func checkChemical(barcode: String) {
-        // Get the selected PI and room number
-        let selectedPIName = piList[selectedPIIndex]
-        let selectedRoomName = roomList[selectedRoomIndex] // E.g., "101, Building A"
-        let selectedRoomNumber = selectedRoomName.split(separator: ",").first?.trimmingCharacters(in: .whitespaces) ?? ""
-
-        // Fetch the room ID
-        guard let selectedRoomID = getRoomID(for: selectedPIName, roomNumber: selectedRoomNumber) else {
-            print("Room ID not found for the selected room")
-            return
-        }
-        
-        print("Selected Room ID: \(selectedRoomID)")
-
-        // Call the NetworkManager to check the chemical
-        NetworkManager.shared.checkChemical(barcode: barcode, selectedRoomID: selectedRoomID) { result in
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                switch result {
-                case .success(let chemicalInfo):
-                    print("DEBUG: Successfully fetched chemical info: \(chemicalInfo)")
-
-                    // Use the retrieved chemical information to display the popup
-                    ChemicalPopupManager.shared.showChemicalInfoPopup(chemicalInfo: chemicalInfo, in: self)
-
-                case .failure(let error):
-                    print("DEBUG: Error received: \(error.errorMessage)")
-                    self.showAlert(title: "Error", message: error.errorMessage)
-                }
-            }
-        }
-    }
-
-
-
-    
-    @IBAction func openBarcodeScanner(_ sender: UIButton) {
-        let scannerVC = BarcodeScannerViewController()
-        scannerVC.modalPresentationStyle = .fullScreen
-        scannerVC.onBarcodeScanned = { [weak self] barcode in
+    @IBAction func scanLabelButtonTapped(_ sender: UIButton) {
+        let ocrScannerVC = OCRScannerViewController()
+        ocrScannerVC.onTextRecognized = { [weak self] casNumber, amount, barcode in
             guard let self = self else { return }
-            scannerVC.dismiss(animated: true) {
-                // Debug log for scanned barcode
-                print("DEBUG: Scanned barcode: \(barcode)")
-
-                // Call checkChemical to process the scanned barcode
-                self.checkChemical(barcode: barcode)
+            
+            print("DEBUG: Received CAS: \(casNumber ?? "N/A"), Amount: \(amount ?? "N/A"), Barcode: \(barcode ?? "N/A")")
+            
+            if let cas = casNumber {
+                self.casNumberTextField.text = cas
+            }
+            if let amt = amount {
+                self.amountTextField.text = amt
+            }
+            if let bc = barcode {
+                self.barcodeTextField.text = bc
             }
         }
-        present(scannerVC, animated: true)
-    }
-
-    
-    
-    @IBAction func testBarcodeButtonTapped(_ sender: UIButton) {
-        let hardcodedBarcode = "0000000041"  // Replace with your desired hardcoded barcode value
-        print("DEBUG: Using hardcoded barcode: \(hardcodedBarcode)")
-        
-        // Call checkChemical with the hardcoded barcode
-        checkChemical(barcode: hardcodedBarcode)
+        present(ocrScannerVC, animated: true)
     }
 
 
-    
-    
 
 
-    func logout() {
-        UserSession.shared.clearSession()
-        
-        // Navigate back to LoginView
-        if let loginVC = storyboard?.instantiateViewController(withIdentifier: "LoginViewController") as? LoginViewController {
-            self.navigationController?.setViewControllers([loginVC], animated: true)
-        }
-    }
-    
-    @IBAction func logoutTapped(_ sender: UIButton) {
-        logout()
-    }
+
+
 
     
 }
 
-extension ScanPageViewController {
+extension AddChemicalViewController {
     func showAlert(title: String, message: String) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
