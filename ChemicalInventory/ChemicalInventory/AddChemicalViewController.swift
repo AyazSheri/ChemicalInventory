@@ -565,7 +565,26 @@ class AddChemicalViewController: BaseViewController {
             
             if let cas = casNumber {
                 self.casNumberTextField.text = cas
+                
+                // Use CAS API to fetch CAS name
+                NetworkManager.shared.casAPI(casNumber: cas) { result in
+                    DispatchQueue.main.async {
+                        switch result {
+                        case .success(let casName):
+                            // Strip HTML tags and set the cleaned name
+                            let cleanedName = self.stripHTMLTags(from: casName)
+                            print("DEBUG: Cleaned CAS Name: \(cleanedName)")
+                            self.nameTextField.text = cleanedName
+                        case .failure(let error):
+                            print("DEBUG: Failed to fetch CAS name: \(error.errorMessage)")
+                            self.nameTextField.text = "N/A"
+                        }
+                    }
+                }
+            } else {
+                self.nameTextField.text = "N/A"
             }
+            
             if let amt = amount {
                 self.amountTextField.text = amt
             }
@@ -575,6 +594,16 @@ class AddChemicalViewController: BaseViewController {
         }
         present(ocrScannerVC, animated: true)
     }
+    
+    private func stripHTMLTags(from string: String) -> String {
+        let regex = try? NSRegularExpression(pattern: "<.*?>", options: [])
+        let range = NSRange(location: 0, length: string.utf16.count)
+        let cleanString = regex?.stringByReplacingMatches(in: string, options: [], range: range, withTemplate: "") ?? string
+        return cleanString
+    }
+
+
+
 
 
 

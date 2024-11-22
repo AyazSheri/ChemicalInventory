@@ -243,6 +243,60 @@ class NetworkManager {
             }
             task.resume()
         }
+    
+    func casAPI(casNumber: String, completion: @escaping (Result<String, NetworkError>) -> Void) {
+            let casBaseURL = "https://commonchemistry.cas.org/api/search"
+            guard var urlComponents = URLComponents(string: casBaseURL) else {
+                completion(.failure(.invalidURL))
+                return
+            }
+            
+            // Add CAS number as a query parameter
+            urlComponents.queryItems = [URLQueryItem(name: "q", value: casNumber)]
+            
+            guard let url = urlComponents.url else {
+                completion(.failure(.invalidURL))
+                return
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.addValue("application/json", forHTTPHeaderField: "Accept")
+            
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    completion(.failure(.serverError(error.localizedDescription)))
+                    return
+                }
+                
+                guard let data = data, let httpResponse = response as? HTTPURLResponse else {
+                    completion(.failure(.invalidResponse))
+                    return
+                }
+                
+                guard httpResponse.statusCode == 200 else {
+                    completion(.failure(.unexpectedStatusCode(httpResponse.statusCode)))
+                    return
+                }
+                
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                       let results = json["results"] as? [[String: Any]],
+                       let firstResult = results.first,
+                       let rawName = firstResult["name"] as? String {
+                        // Clean the CAS name by removing commas
+                        let cleanedName = rawName.replacingOccurrences(of: ",", with: "")
+                        completion(.success(cleanedName))
+                    } else {
+                        completion(.failure(.dataParsingFailed("Unexpected JSON structure")))
+                    }
+                } catch {
+                    completion(.failure(.dataParsingFailed(error.localizedDescription)))
+                }
+            }
+            
+            task.resume()
+        }
 
 
 }
