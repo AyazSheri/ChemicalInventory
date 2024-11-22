@@ -14,8 +14,11 @@ class OCRScannerViewController: UIViewController, AVCaptureVideoDataOutputSample
     var previewLayer: AVCaptureVideoPreviewLayer!
     var onTextRecognized: ((String?, String?, String?) -> Void)? // CAS, Amount, Barcode
     
-    private var frameCounter: Int = 0
-    private let maxFramesToProcess = 10 // Process up to 10 frames before stopping
+    private var barcodeFrameCounter: Int = 0
+    private let maxBarcodeFrames = 10 // Limit for barcode detection after CAS and Amount are found
+    private var casNumber: String?
+    private var amount: String?
+    private var barcode: String?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -140,44 +143,43 @@ class OCRScannerViewController: UIViewController, AVCaptureVideoDataOutputSample
             let recognizedText = observations.compactMap { $0.topCandidates(1).first?.string }
             print("DEBUG: Recognized text: \(recognizedText)")
             
-            var casNumber: String?
-            var amount: String?
-            var barcode: String?
-            
             for text in recognizedText {
                 // Extract CAS number
-                if casNumber == nil {
-                    casNumber = self.extractCASNumber(from: text)
-                    if let cas = casNumber {
+                if self.casNumber == nil {
+                    self.casNumber = self.extractCASNumber(from: text)
+                    if let cas = self.casNumber {
                         print("DEBUG: Found CAS Number: \(cas)")
                     }
                 }
                 
                 // Extract Amount
-                if amount == nil {
-                    amount = self.extractAmount(from: text)
-                    if let amt = amount {
+                if self.amount == nil {
+                    self.amount = self.extractAmount(from: text)
+                    if let amt = self.amount {
                         print("DEBUG: Found Amount: \(amt)")
                     }
                 }
                 
-                // Extract Barcode
-                if barcode == nil {
-                    barcode = self.extractBarcode(from: text)
-                    if let bc = barcode {
-                        print("DEBUG: Found Barcode: \(bc)")
+                // Extract Barcode (only after CAS and Amount are found)
+                if self.casNumber != nil && self.amount != nil {
+                    if self.barcode == nil {
+                        self.barcode = self.extractBarcode(from: text)
+                        if let bc = self.barcode {
+                            print("DEBUG: Found Barcode: \(bc)")
+                        }
                     }
                 }
             }
             
-            // Increment frame counter
-            self.frameCounter += 1
-            print("DEBUG: Frame count: \(self.frameCounter)")
-            
-            // Close the camera if CAS and Amount are found, or max frames reached
-            if casNumber != nil && amount != nil || self.frameCounter >= self.maxFramesToProcess {
-                print("DEBUG: CAS and Amount found. Preparing to close camera.")
-                self.closeCamera(withCAS: casNumber, amount: amount, andBarcode: barcode)
+            // Start barcode countdown if CAS and Amount are found
+            if self.casNumber != nil && self.amount != nil {
+                self.barcodeFrameCounter += 1
+                print("DEBUG: Barcode frame count: \(self.barcodeFrameCounter)")
+                
+                if self.barcode != nil || self.barcodeFrameCounter >= self.maxBarcodeFrames {
+                    print("DEBUG: Barcode detection finished. Closing camera.")
+                    self.closeCamera(withCAS: self.casNumber, amount: self.amount, andBarcode: self.barcode)
+                }
             }
         }
         
