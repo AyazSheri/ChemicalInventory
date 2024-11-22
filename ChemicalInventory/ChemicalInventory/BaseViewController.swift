@@ -20,6 +20,10 @@ class BaseViewController: UIViewController {
         setupDimmingView()
         addSwipeGesture()
     }
+    
+    func setPageTitle(_ title: String) {
+        navigationItem.title = title
+    }
 
     // Sets up the side menu as a SwiftUI overlay
     private func setupSideMenu() {
@@ -139,7 +143,7 @@ class BaseViewController: UIViewController {
 
         switch destination {
         case "Scan":
-            navigateToScanPage() 
+            navigateToScanPage()
         case "AddChemical":
             navigateToAddChemical()
         case "Logout":

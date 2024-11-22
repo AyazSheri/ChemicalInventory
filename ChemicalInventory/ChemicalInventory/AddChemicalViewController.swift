@@ -39,6 +39,8 @@ class AddChemicalViewController: BaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        setPageTitle("Add Chemical")
+        
         // Debugging
         print("Initializing ScanPageViewController...")
         
@@ -175,12 +177,14 @@ class AddChemicalViewController: BaseViewController {
             label.translatesAutoresizingMaskIntoConstraints = false
             label.font = UIFont.systemFont(ofSize: 16)
             label.textAlignment = .left
+            label.layer.zPosition = -1
             view.addSubview(label)
 
             let textField = UITextField()
             textField.borderStyle = .roundedRect
             textField.translatesAutoresizingMaskIntoConstraints = false
             textField.font = UIFont.systemFont(ofSize: 16)
+            textField.layer.zPosition = -1
             view.addSubview(textField)
 
             switch labelText {

@@ -11,8 +11,10 @@ struct Sidebar: View {
     var onNavigate: ((String) -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) { // Align content to the left
+        VStack(alignment: .leading, spacing: 20) { // Default spacing for buttons
             Spacer().frame(height: 60) // Space for status bar
+
+            // Other menu items
             Button(action: {
                 onNavigate?("Scan")
                 isMenuOpen = false // Close menu
@@ -31,8 +33,8 @@ struct Sidebar: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, alignment: .leading) // Ensure left alignment
             }
-            Spacer() // Push items to the top
-            
+
+            // Logout button with custom spacing
             Button(action: {
                 onNavigate?("Logout") // Trigger logout
                 isMenuOpen = false // Close menu
@@ -40,8 +42,11 @@ struct Sidebar: View {
                 Text("Logout")
                     .font(.headline)
                     .foregroundColor(.red) // Highlight logout in red
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.top, 40)
+            .padding(.top, 40) // Twice the spacing relative to other buttons
+
+            Spacer() // Push the menu items to the top
         }
         .padding()
         .frame(maxWidth: UIScreen.main.bounds.width * 0.75)
@@ -49,4 +54,5 @@ struct Sidebar: View {
         .edgesIgnoringSafeArea(.vertical)
     }
 }
+
 

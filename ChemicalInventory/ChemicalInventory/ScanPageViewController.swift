@@ -32,6 +32,8 @@ class ScanPageViewController: BaseViewController {
         // Debugging
         print("Initializing ScanPageViewController...")
         
+        setPageTitle("Scan Chemical")
+        
         // Set User's Name
         nameLabel.text = "Name: \(UserSession.shared.userName ?? "Unknown User")"
         
