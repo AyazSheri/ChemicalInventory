@@ -33,6 +33,15 @@ struct Sidebar: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, alignment: .leading) // Ensure left alignment
             }
+            Button(action: {
+                onNavigate?("Profile")
+                isMenuOpen = false // Close menu
+            }) {
+                Text("Profile")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading) // Ensure left alignment
+            }
 
             // Logout button with custom spacing
             Button(action: {

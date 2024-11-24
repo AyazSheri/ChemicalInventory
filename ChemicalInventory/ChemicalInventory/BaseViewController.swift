@@ -146,6 +146,8 @@ class BaseViewController: UIViewController {
             navigateToScanPage()
         case "AddChemical":
             navigateToAddChemical()
+        case "Profile":
+            navigateToProfile()
         case "Logout":
                 logout()
         default:
@@ -173,6 +175,17 @@ class BaseViewController: UIViewController {
             print("DEBUG: Failed to instantiate AddChemicalViewController")
         }
     }
+    
+    private func navigateToProfile() {
+        if let profileVC = storyboard?.instantiateViewController(withIdentifier: "PIProfilePageViewController") as? PIProfilePageViewController {
+            print("DEBUG: Navigating to PIProfilePageViewController")
+            navigationController?.setViewControllers([profileVC], animated: true)
+        } else {
+            print("DEBUG: Failed to instantiate PIProfilePageViewController")
+        }
+    }
+    
+    
     
     private func logout() {
         UserSession.shared.clearSession()
