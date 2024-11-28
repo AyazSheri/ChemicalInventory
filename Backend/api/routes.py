@@ -157,6 +157,38 @@ class CheckChemical(Resource):
             return {"error": f"Internal server error: {str(e)}"}, 500
 
 
+class PILoginResource(Resource):
+    def post(self):
+        print("DEBUG: PILoginResource called")
+        data = request.get_json()
+        email = data.get("email")  # Match LoginResource by using email
+        password = data.get("password")
+        print("DEBUG: Email received:", email)
+        print("DEBUG: Password received:", password)
+
+        # Validate PI credentials
+        pi = PI.query.filter_by(email=email).first()  # Use email for PI lookup
+        print("DEBUG: Found PI:", pi)
+        if pi and pi.check_password(password):
+            # Fetch rooms associated with the PI
+            rooms = Room.query.filter_by(pi_id=pi.id).all()
+            room_data = [
+                {
+                    "room_id": room.id,
+                    "room_number": room.room_number,
+                    "building_name": Building.query.get(room.building_id).name  # Correctly fetch building name
+                }
+                for room in rooms
+            ]
+
+            return jsonify({
+                "success": True,
+                "pi_id": pi.id,  # Include PI id for consistency
+                "pi_name": pi.name,  # Use pi.name as the PI's name
+                "rooms": room_data  # Associated rooms
+            })
+
+        return jsonify({"success": False, "message": "Invalid email or password"}), 401
 
 
 
@@ -431,6 +463,7 @@ def initialize_routes(api):
     api.add_resource(ChemicalEdit, '/chemicals/update')
     api.add_resource(SpaceResource, '/rooms/<int:room_id>/spaces')
     api.add_resource(CheckChemical, '/scan/check_chemical')
+    api.add_resource(PILoginResource, '/pi-login')
     api.add_resource(LoginResource, '/login')
     api.add_resource(ChemicalListResource, '/chemicals')
     api.add_resource(ChemicalQueryResource, '/chemicals/query')

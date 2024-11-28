@@ -188,7 +188,9 @@ class BaseViewController: UIViewController {
     
     
     private func logout() {
+        print("DEBUG: Starting logout process...")
         UserSession.shared.clearSession()
+        print("DEBUG: User session cleared.")
         
         // Navigate back to LoginView
         if let loginVC = storyboard?.instantiateViewController(withIdentifier: "LoginViewController") as? LoginViewController {

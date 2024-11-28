@@ -14,6 +14,8 @@ class UserSession {
     var userName: String?
     var pis: [[String: Any]] = []
     var isLoggedIn: Bool = false
+    var isPI: Bool = false
+
 
     // Private initializer to prevent direct instantiation
     private init() {
@@ -27,7 +29,8 @@ class UserSession {
         print("Saving session data to UserDefaults...")
         let sessionData: [String: Any] = [
             "user_name": userName ?? "",
-            "pis": pis
+            "pis": pis,
+            "isPI": isPI
         ]
 
         if let serializedData = try? JSONSerialization.data(withJSONObject: sessionData, options: []) {
@@ -47,6 +50,7 @@ class UserSession {
             userName = jsonObject["user_name"] as? String
             pis = jsonObject["pis"] as? [[String: Any]] ?? []
             isLoggedIn = UserDefaults.standard.bool(forKey: "isLoggedIn")
+            isPI = jsonObject["isPI"] as? Bool ?? false
             print("Session data loaded: isLoggedIn: \(isLoggedIn), userName: \(userName ?? "nil")")
         } else {
             print("No session data found in UserDefaults.")
@@ -59,8 +63,11 @@ class UserSession {
         userName = nil
         pis = []
         isLoggedIn = false
+        isPI = false
         UserDefaults.standard.removeObject(forKey: "userSessionData")
         UserDefaults.standard.removeObject(forKey: "isLoggedIn")
+        UserDefaults.standard.removeObject(forKey: "selectedPIIndex")
+        UserDefaults.standard.removeObject(forKey: "selectedRoomIndex")
         print("Session data cleared.")
     }
 }

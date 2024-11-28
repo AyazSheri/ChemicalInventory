@@ -37,6 +37,7 @@ class LoginViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        // UserSession.shared.clearSession() 
 
         print("LoginViewController loaded.")
         print("isLoggedIn: \(UserSession.shared.isLoggedIn), userName: \(UserSession.shared.userName ?? "nil")")

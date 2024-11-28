@@ -10,8 +10,8 @@ import Foundation
 class NetworkManager {
     static let shared = NetworkManager()
     //private var baseURL = "http://127.0.0.1:5000" // local host
-    //private var baseURL = "http://192.168.1.31:5000" // machine ip
-    private var baseURL = "https://mobile-chemical-inventory-40584a411faf.herokuapp.com/" // online server
+    private var baseURL = "http://192.168.1.31:5000" // machine ip
+    //private var baseURL = "https://mobile-chemical-inventory-40584a411faf.herokuapp.com/" // online server
     func setBaseURL(to url: String) {
         baseURL = url
     }
@@ -78,6 +78,60 @@ class NetworkManager {
                     UserSession.shared.userName = json["user_name"] as? String
                     UserSession.shared.pis = json["pis"] as? [[String: Any]] ?? []
                     UserSession.shared.isLoggedIn = true
+                    UserSession.shared.isPI = false
+
+                    // Persist to UserDefaults
+                    UserSession.shared.saveToUserDefaults()
+                    completion(true, nil)
+                } else {
+                    print("DEBUG: User login failed. Attempting PI login.")
+                    self.piLogin(email: email, password: password, completion: completion)
+                }
+            } else {
+                print("DEBUG: User login failed. Attempting PI login.")
+                //completion(false, "Login failed with status code \(httpResponse.statusCode)")
+                self.piLogin(email: email, password: password, completion: completion)
+            }
+        }
+        task.resume()
+    }
+    
+    private func piLogin(email: String, password: String, completion: @escaping (Bool, String?) -> Void) {
+        guard let url = URL(string: "\(baseURL)/pi-login") else {
+            completion(false, "Invalid URL")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body = ["email": email, "password": password]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(false, error.localizedDescription)
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(false, "Invalid response")
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                   let success = json["success"] as? Bool, success {
+                    // Save to UserSession
+                    UserSession.shared.userName = json["pi_name"] as? String // PI name as username
+                    UserSession.shared.pis = [[
+                        "pi_id": json["pi_id"] as? Int ?? -1,
+                        "pi_name": json["pi_name"] as? String ?? "",
+                        "rooms": json["rooms"] as? [[String: Any]] ?? []
+                    ]] // Only the logged-in PI
+                    UserSession.shared.isLoggedIn = true
+                    UserSession.shared.isPI = true // User is a PI
 
                     // Persist to UserDefaults
                     UserSession.shared.saveToUserDefaults()
@@ -86,7 +140,7 @@ class NetworkManager {
                     completion(false, "Invalid email or password")
                 }
             } else {
-                completion(false, "Login failed with status code \(httpResponse.statusCode)")
+                completion(false, "PI Login failed with status code \(httpResponse.statusCode)")
             }
         }
         task.resume()
