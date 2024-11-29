@@ -7,6 +7,106 @@ from flask import request, jsonify
 from flask_restful import Resource, reqparse
 from werkzeug.security import check_password_hash
 from db_models.models import db, User, PI, Room, Building
+from sqlalchemy import or_
+
+class SearchChemicalsResource(Resource):
+    def post(self):
+        print("DEBUG: SearchChemicalsResource endpoint called.")
+
+        # Get the request data
+        data = request.get_json()
+        print(f"DEBUG: Received request data: {data}")
+
+        # Parse query and filter
+        query = data.get("query", "").lower()
+        filter_option = data.get("filter", "Current Room")
+        print(f"DEBUG: Query: {query}, Filter Option: {filter_option}")
+
+        # Parse PI and Room data
+        user_pis = data.get("pis", [])
+        pi_index = data.get("pi_index")  # Selected PI index
+        room_index = data.get("room_index")  # Selected Room index
+        print(f"DEBUG: User PIs: {user_pis}, PI Index: {pi_index}, Room Index: {room_index}")
+
+        try:
+            chemicals = []
+
+            if filter_option == "Current Room" and pi_index is not None and room_index is not None:
+                # Get the room_id for the selected PI and Room
+                pi_data = user_pis[pi_index] if pi_index < len(user_pis) else None
+                if pi_data:
+                    room_data = pi_data["rooms"][room_index] if room_index < len(pi_data["rooms"]) else None
+                    room_id = room_data["room_id"] if room_data else None
+                    print(f"DEBUG: Current Room ID resolved: {room_id}")
+
+                    # Query chemicals in the specific room
+                    if room_id:
+                        chemicals = Chemical.query.filter(
+                            Chemical.room_id == room_id,
+                            db.or_(
+                                Chemical.name.ilike(f"%{query}%"),
+                                Chemical.cas_number.ilike(f"%{query}%"),
+                                Chemical.barcode.ilike(f"%{query}%")
+                            )
+                        ).all()
+                        print(f"DEBUG: Found {len(chemicals)} chemicals for Current Room.")
+
+            elif filter_option == "Current PI" and pi_index is not None:
+                # Get room_ids for the selected PI
+                pi_data = user_pis[pi_index] if pi_index < len(user_pis) else None
+                if pi_data:
+                    room_ids = [room["room_id"] for room in pi_data["rooms"]]
+                    print(f"DEBUG: Room IDs for Current PI: {room_ids}")
+
+                    # Query chemicals in all rooms for the selected PI
+                    chemicals = Chemical.query.filter(
+                        Chemical.room_id.in_(room_ids),
+                        db.or_(
+                            Chemical.name.ilike(f"%{query}%"),
+                            Chemical.cas_number.ilike(f"%{query}%"),
+                            Chemical.barcode.ilike(f"%{query}%")
+                        )
+                    ).all()
+                    print(f"DEBUG: Found {len(chemicals)} chemicals for Current PI.")
+
+            elif filter_option == "All PIs":
+                # Get room_ids for all PIs
+                room_ids = [room["room_id"] for pi in user_pis for room in pi["rooms"]]
+                print(f"DEBUG: Room IDs for All PIs: {room_ids}")
+
+                # Query chemicals in all rooms for all PIs
+                chemicals = Chemical.query.filter(
+                    Chemical.room_id.in_(room_ids),
+                    db.or_(
+                        Chemical.name.ilike(f"%{query}%"),
+                        Chemical.cas_number.ilike(f"%{query}%"),
+                        Chemical.barcode.ilike(f"%{query}%")
+                    )
+                ).all()
+                print(f"DEBUG: Found {len(chemicals)} chemicals for All PIs.")
+
+            else:
+                print("DEBUG: Invalid filter or missing indices.")
+
+            # Use the exact response format you provided
+            results = [
+                {
+                    "name": chemical.name,
+                    "barcode": chemical.barcode,
+                    "room_number": Room.query.get(chemical.room_id).room_number,
+                    "building_name": Building.query.get(Room.query.get(chemical.room_id).building_id).name,
+                }
+                for chemical in chemicals
+            ]
+            print(f"DEBUG: Prepared {len(results)} results.")
+
+            return jsonify({"success": True, "results": results})
+
+        except Exception as e:
+            print(f"DEBUG: Exception occurred: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+
+
 
 class ChemicalDelete(Resource):
     def delete(self, chemical_id):
@@ -459,6 +559,7 @@ class ChemicalsByRoom(Resource):
 
 # --- Add the new routes to your app ---
 def initialize_routes(api):
+    api.add_resource(SearchChemicalsResource, '/search-chemical')
     api.add_resource(ChemicalDelete, '/chemicaldelete/<int:chemical_id>')
     api.add_resource(ChemicalEdit, '/chemicals/update')
     api.add_resource(SpaceResource, '/rooms/<int:room_id>/spaces')

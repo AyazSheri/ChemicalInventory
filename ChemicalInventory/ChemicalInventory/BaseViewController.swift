@@ -19,11 +19,31 @@ class BaseViewController: UIViewController {
         setupCustomNavigationBarButton()
         setupDimmingView()
         addSwipeGesture()
+        setupSearchButton()
     }
     
     func setPageTitle(_ title: String) {
         navigationItem.title = title
     }
+    
+    private func setupSearchButton() {
+        let searchButton = UIButton(type: .system)
+        searchButton.setImage(UIImage(systemName: "magnifyingglass"), for: .normal)
+        searchButton.frame = CGRect(x: 0, y: 0, width: 30, height: 30)
+        searchButton.addTarget(self, action: #selector(openSearch), for: .touchUpInside)
+
+        let barButtonItem = UIBarButtonItem(customView: searchButton)
+        navigationItem.rightBarButtonItem = barButtonItem
+
+        print("DEBUG: Search button added to navigation bar.")
+    }
+
+    @objc private func openSearch() {
+        let searchVC = SearchViewController()
+        searchVC.modalPresentationStyle = .fullScreen
+        present(searchVC, animated: true)
+    }
+
 
     // Sets up the side menu as a SwiftUI overlay
     private func setupSideMenu() {

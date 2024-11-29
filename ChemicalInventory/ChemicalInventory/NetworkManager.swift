@@ -35,6 +35,7 @@ class NetworkManager {
                 return "Unexpected status code: \(statusCode)"
             case .dataParsingFailed(let details):
                 return "Data parsing failed: \(details)"
+            
             }
         }
     }
@@ -43,10 +44,69 @@ class NetworkManager {
         let id: Int
         let name: String
     }
+    
+    func searchChemicals(query: String, filter: String, completion: @escaping (Result<[[String: Any]], NetworkError>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/search-chemical") else {
+            completion(.failure(.invalidURL))
+            return
+        }
 
+        // Fetch selected PI and Room indices from UserDefaults
+        let selectedPIIndex = UserDefaults.standard.value(forKey: "selectedPIIndex") as? Int ?? 0
+        let selectedRoomIndex = UserDefaults.standard.value(forKey: "selectedRoomIndex") as? Int ?? 0
 
+        // Construct the request body
+        let body: [String: Any] = [
+            "query": query,
+            "filter": filter,
+            "pi_index": selectedPIIndex,
+            "room_index": selectedRoomIndex,
+            "pis": UserSession.shared.pis
+        ]
 
+        print("DEBUG: Request body being sent: \(body)")
 
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+        } catch {
+            completion(.failure(.dataParsingFailed("Failed to serialize request body: \(error.localizedDescription)")))
+            return
+        }
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(.serverError(error.localizedDescription)))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(.invalidResponse))
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                       let results = json["results"] as? [[String: Any]] {
+                        completion(.success(results))
+                    } else {
+                        completion(.failure(.dataParsingFailed("Invalid JSON structure.")))
+                    }
+                } catch {
+                    completion(.failure(.dataParsingFailed("Failed to parse response data: \(error.localizedDescription)")))
+                }
+            } else {
+                completion(.failure(.unexpectedStatusCode(httpResponse.statusCode)))
+            }
+        }
+        task.resume()
+    }
+
+    
     func login(email: String, password: String, completion: @escaping (Bool, String?) -> Void) {
         guard let url = URL(string: "\(baseURL)/login") else {
             completion(false, "Invalid URL")
