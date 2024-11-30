@@ -12,6 +12,59 @@ class ChemicalPopupManager {
     static let shared = ChemicalPopupManager()
 
     private init() {}
+    
+    func showChemicalInfoPopupSearch(chemicalInfo: [String: Any], in viewController: UIViewController) {
+        print("DEBUG: showChemicalInfoPopup called with chemicalInfo: \(chemicalInfo)")
+        print("DEBUG: Using viewController: \(viewController)")
+        guard let name = chemicalInfo["name"] as? String,
+              let casNumber = chemicalInfo["cas_number"] as? String,
+              let amount = chemicalInfo["amount"] as? Double,
+              let unit = chemicalInfo["unit"] as? String,
+              let room = chemicalInfo["room"] as? String,
+              let expirationDate = chemicalInfo["expiration_date"] as? String else {
+            print("ERROR: Missing required chemical information")
+            return
+        }
+
+        let space = chemicalInfo["space"] as? String  // Optional field for space
+
+        DispatchQueue.main.async {
+            let appearance = SCLAlertView.SCLAppearance(
+                showCloseButton: false,
+                buttonsLayout: .vertical
+            )
+            let alert = SCLAlertView(appearance: appearance)
+
+            // Create a custom UILabel for the message
+            let customLabel = UILabel()
+            customLabel.numberOfLines = 0
+            customLabel.textAlignment = .left // Align text to the left
+            customLabel.font = UIFont.systemFont(ofSize: 16) // Adjust font size as needed
+            customLabel.text = """
+            Name: \(name)
+            CAS: \(casNumber)
+            Remaining: \(amount) \(unit)
+            Room: \(room)
+            \(space != nil ? "Space: \(space!)\n" : "")Expiration: \(expirationDate)
+            """
+            customLabel.frame = CGRect(x: 0, y: 0, width: 250, height: 200)
+            customLabel.sizeToFit() // Adjust size to fit the content
+            
+            print("DEBUG: Popup message: \(customLabel.text ?? "No message")")
+            
+            // Add custom label to the alert
+            alert.customSubview = customLabel
+            
+            // Add buttons
+            alert.addButton("Edit") {
+                ChemicalPopupManager.shared.showEditChemicalPopup(chemicalInfo: chemicalInfo, in: viewController)
+            }
+            alert.addButton("Cancel", action: {})
+
+            // Show alert
+            alert.showCustom("Chemical Info", subTitle: "", color: .green)
+        }
+    }
 
     // MARK: - Show Chemical Info Popup
     func showChemicalInfoPopup(chemicalInfo: [String: Any], in viewController: UIViewController) {

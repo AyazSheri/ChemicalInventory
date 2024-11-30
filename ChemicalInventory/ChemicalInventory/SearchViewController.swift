@@ -215,13 +215,7 @@ class SearchViewController: UIViewController, UISearchBarDelegate {
                 button.contentHorizontalAlignment = .left
                 button.addTarget(self, action: #selector(resultButtonTapped(_:)), for: .touchUpInside)
 
-                // Use a unique tag if possible (fallback to -1 for safety)
-                if let barcodeAsInt = Int(barcode) {
-                    button.tag = barcodeAsInt
-                } else {
-                    print("DEBUG: Barcode \(barcode) is not numeric; using default tag -1.")
-                    button.tag = -1
-                }
+                button.accessibilityIdentifier = barcode
 
                 resultsStackView.addArrangedSubview(button)
             }
@@ -234,8 +228,71 @@ class SearchViewController: UIViewController, UISearchBarDelegate {
 
 
     @objc private func resultButtonTapped(_ sender: UIButton) {
-        print("DEBUG: Button tapped for barcode: \(sender.tag).")
-        // Logic to display popup or navigate based on chemical ID
+        // Retrieve the full barcode from the button's accessibilityIdentifier
+        if let barcode = sender.accessibilityIdentifier {
+            print("DEBUG: Button tapped with barcode: \(barcode)")
+            checkChemicalSearch(barcode: barcode)
+        } else {
+            print("DEBUG: Barcode not found for the tapped button.")
+        }
+    }
+
+    
+    func checkChemicalSearch(barcode: String) {
+        // Fetch the selected PI and room indices from UserDefaults
+        let selectedPIIndex = UserDefaults.standard.integer(forKey: "selectedPIIndex")
+        let selectedRoomIndex = UserDefaults.standard.integer(forKey: "selectedRoomIndex")
+
+        // Validate PI and Room data from UserSession
+        guard selectedPIIndex < UserSession.shared.pis.count else {
+            print("DEBUG: Invalid selectedPIIndex \(selectedPIIndex).")
+            return
+        }
+
+        let selectedPI = UserSession.shared.pis[selectedPIIndex]
+        guard let piName = selectedPI["pi_name"] as? String,
+              let rooms = selectedPI["rooms"] as? [[String: Any]],
+              selectedRoomIndex < rooms.count else {
+            print("DEBUG: Invalid selectedRoomIndex \(selectedRoomIndex) or missing room data.")
+            return
+        }
+
+        let selectedRoom = rooms[selectedRoomIndex]
+        guard let roomID = selectedRoom["room_id"] as? Int,
+              let roomNumber = selectedRoom["room_number"] as? String else {
+            print("DEBUG: Room ID or room number not found for selectedRoomIndex \(selectedRoomIndex).")
+            return
+        }
+
+        print("DEBUG: Selected PI: \(piName), Room: \(roomNumber), Room ID: \(roomID).")
+
+        // Call the NetworkManager to check the chemical
+        NetworkManager.shared.checkChemical(barcode: barcode, selectedRoomID: roomID) { result in
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+
+                switch result {
+                case .success(let chemicalInfo):
+                    print("DEBUG: Successfully fetched chemical info: \(chemicalInfo)")
+
+                    // Use the retrieved chemical information to display the popup
+                    ChemicalPopupManager.shared.showChemicalInfoPopupSearch(chemicalInfo: chemicalInfo, in: self)
+
+                case .failure(let error):
+                    print("DEBUG: Error received: \(error.errorMessage)")
+                    self.showAlert(title: "Error", message: error.errorMessage)
+                }
+            }
+        }
+    }
+
+}
+
+extension SearchViewController {
+    func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        self.present(alert, animated: true, completion: nil)
     }
 }
 
