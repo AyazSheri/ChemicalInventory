@@ -14,12 +14,14 @@ class OCRScannerViewController: UIViewController, AVCaptureVideoDataOutputSample
     var previewLayer: AVCaptureVideoPreviewLayer!
     var onTextRecognized: ((String?, String?, String?) -> Void)? // CAS, Amount, Barcode
     
-    private var barcodeFrameCounter: Int = 0
-    private let maxBarcodeFrames = 10 // Limit for barcode detection after CAS and Amount are found
     private var casNumber: String?
     private var amount: String?
     private var barcode: String?
     
+    private var casLabel: UILabel!
+    private var amountLabel: UILabel!
+    private var barcodeLabel: UILabel!
+
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -56,11 +58,12 @@ class OCRScannerViewController: UIViewController, AVCaptureVideoDataOutputSample
         // Setup camera preview
         setupPreview()
         
-        // Add overlay
+        // Add overlay and labels
         addOverlay()
+        setupLabels()
         
-        // Add a Cancel button
-        addCancelButton()
+        addCancelAndDoneButtons()
+
         
         // Start the camera session
         print("DEBUG: Starting camera session...")
@@ -97,8 +100,40 @@ class OCRScannerViewController: UIViewController, AVCaptureVideoDataOutputSample
         borderLayer.lineWidth = 2
         view.layer.addSublayer(borderLayer)
     }
-    
-    func addCancelButton() {
+
+    private func setupLabels() {
+        // Create labels
+        casLabel = createLabel(text: "CAS Number:")
+        amountLabel = createLabel(text: "Amount:")
+        barcodeLabel = createLabel(text: "Barcode:")
+
+        // Stack view for labels
+        let stackView = UIStackView(arrangedSubviews: [casLabel, amountLabel, barcodeLabel])
+        stackView.axis = .vertical
+        stackView.spacing = 10
+        stackView.alignment = .center // Center the labels
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+
+        view.addSubview(stackView)
+
+        // Position the stack view above the scanning field
+        NSLayoutConstraint.activate([
+            stackView.bottomAnchor.constraint(equalTo: view.centerYAnchor, constant: -120),
+            stackView.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+        ])
+    }
+
+    private func createLabel(text: String) -> UILabel {
+        let label = UILabel()
+        label.text = text
+        label.textColor = .white
+        label.font = UIFont.systemFont(ofSize: 18)
+        label.textAlignment = .center
+        return label
+    }
+
+    func addCancelAndDoneButtons() {
+        // Add Cancel button
         let cancelButton = UIButton()
         cancelButton.setTitle("Cancel", for: .normal)
         cancelButton.backgroundColor = .red
@@ -107,13 +142,36 @@ class OCRScannerViewController: UIViewController, AVCaptureVideoDataOutputSample
         cancelButton.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
         view.addSubview(cancelButton)
         
+        // Add Done button
+        let doneButton = UIButton()
+        doneButton.setTitle("Done", for: .normal)
+        doneButton.backgroundColor = .green
+        doneButton.layer.cornerRadius = 8
+        doneButton.translatesAutoresizingMaskIntoConstraints = false
+        doneButton.addTarget(self, action: #selector(doneTapped), for: .touchUpInside)
+        view.addSubview(doneButton)
+        
+        // Add constraints
         NSLayoutConstraint.activate([
-            cancelButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
+            // Done button constraints
+            doneButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -80),
+            doneButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            doneButton.widthAnchor.constraint(equalToConstant: 100),
+            doneButton.heightAnchor.constraint(equalToConstant: 40),
+            
+            // Cancel button constraints
+            cancelButton.topAnchor.constraint(equalTo: doneButton.bottomAnchor, constant: 10),
             cancelButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             cancelButton.widthAnchor.constraint(equalToConstant: 100),
             cancelButton.heightAnchor.constraint(equalToConstant: 40)
         ])
     }
+
+    @objc func doneTapped() {
+        print("DEBUG: Done button tapped. Closing camera with scanned values.")
+        closeCamera(withCAS: casNumber, amount: amount, andBarcode: barcode)
+    }
+
     
     @objc func cancelTapped() {
         print("DEBUG: Cancel button tapped. Stopping camera session.")
@@ -149,6 +207,7 @@ class OCRScannerViewController: UIViewController, AVCaptureVideoDataOutputSample
                     self.casNumber = self.extractCASNumber(from: text)
                     if let cas = self.casNumber {
                         print("DEBUG: Found CAS Number: \(cas)")
+                        self.updateLabel(self.casLabel, with: cas)
                     }
                 }
                 
@@ -157,29 +216,24 @@ class OCRScannerViewController: UIViewController, AVCaptureVideoDataOutputSample
                     self.amount = self.extractAmount(from: text)
                     if let amt = self.amount {
                         print("DEBUG: Found Amount: \(amt)")
+                        self.updateLabel(self.amountLabel, with: amt)
                     }
                 }
                 
-                // Extract Barcode (only after CAS and Amount are found)
-                if self.casNumber != nil && self.amount != nil {
-                    if self.barcode == nil {
-                        self.barcode = self.extractBarcode(from: text)
-                        if let bc = self.barcode {
-                            print("DEBUG: Found Barcode: \(bc)")
-                        }
+                // Extract Barcode
+                if self.barcode == nil {
+                    self.barcode = self.extractBarcode(from: text)
+                    if let bc = self.barcode {
+                        print("DEBUG: Found Barcode: \(bc)")
+                        self.updateLabel(self.barcodeLabel, with: bc)
                     }
                 }
             }
             
-            // Start barcode countdown if CAS and Amount are found
-            if self.casNumber != nil && self.amount != nil {
-                self.barcodeFrameCounter += 1
-                print("DEBUG: Barcode frame count: \(self.barcodeFrameCounter)")
-                
-                if self.barcode != nil || self.barcodeFrameCounter >= self.maxBarcodeFrames {
-                    print("DEBUG: Barcode detection finished. Closing camera.")
-                    self.closeCamera(withCAS: self.casNumber, amount: self.amount, andBarcode: self.barcode)
-                }
+            // Finish scan only when all elements are found
+            if self.casNumber != nil && self.amount != nil && self.barcode != nil {
+                print("DEBUG: All elements scanned. Closing camera.")
+                self.closeCamera(withCAS: self.casNumber, amount: self.amount, andBarcode: self.barcode)
             }
         }
         
@@ -194,6 +248,15 @@ class OCRScannerViewController: UIViewController, AVCaptureVideoDataOutputSample
         }
     }
 
+    private func updateLabel(_ label: UILabel, with text: String) {
+        DispatchQueue.main.async {
+            let checkmark = " ✅"
+            if !(label.text?.contains(checkmark) ?? false) { // Prevent duplicate checkmarks
+                label.text = "\(label.text ?? "") \(text)\(checkmark)"
+            }
+        }
+    }
+
     private func closeCamera(withCAS cas: String?, amount: String?, andBarcode barcode: String?) {
         print("DEBUG: Closing camera with CAS: \(cas ?? "N/A"), Amount: \(amount ?? "N/A"), Barcode: \(barcode ?? "None")")
         DispatchQueue.main.async {
@@ -203,30 +266,100 @@ class OCRScannerViewController: UIViewController, AVCaptureVideoDataOutputSample
         }
     }
 
+    private var casFirstScan: String? = nil
+    private var casSecondScan: String? = nil
+
+    private var amountFirstScan: String? = nil
+    private var amountSecondScan: String? = nil
+
+    private var barcodeFirstScan: String? = nil
+    private var barcodeSecondScan: String? = nil
+
     private func extractCASNumber(from text: String) -> String? {
         let casRegex = #"CAS[:\s]*([\d-]+)"#
         if let match = text.range(of: casRegex, options: .regularExpression) {
-            let matchedText = text[match]
+            let matchedText = String(text[match])
             if let casMatch = matchedText.range(of: #"[\d-]+"#, options: .regularExpression) {
-                return String(matchedText[casMatch])
+                let casValue = String(matchedText[casMatch])
+                
+                // Two-scan confirmation logic
+                if casFirstScan == nil {
+                    casFirstScan = casValue
+                    print("DEBUG: CAS First Scan: \(casFirstScan ?? "N/A")")
+                    return nil
+                } else {
+                    casSecondScan = casValue
+                    if casFirstScan == casSecondScan {
+                        print("DEBUG: CAS Confirmed: \(casSecondScan ?? "N/A")")
+                        casFirstScan = nil
+                        casSecondScan = nil
+                        return casValue
+                    } else {
+                        print("DEBUG: CAS Mismatch. Retrying...")
+                        casFirstScan = casSecondScan
+                        casSecondScan = nil
+                        return nil
+                    }
+                }
             }
         }
         return nil
     }
-    
+
     private func extractAmount(from text: String) -> String? {
         let amountRegex = #"\d+(\.\d+)?\s*(kg|g|L|mL)"#
         if let range = text.range(of: amountRegex, options: .regularExpression) {
-            return String(text[range])
+            let amountValue = String(text[range])
+            
+            // Two-scan confirmation logic
+            if amountFirstScan == nil {
+                amountFirstScan = amountValue
+                print("DEBUG: Amount First Scan: \(amountFirstScan ?? "N/A")")
+                return nil
+            } else {
+                amountSecondScan = amountValue
+                if amountFirstScan == amountSecondScan {
+                    print("DEBUG: Amount Confirmed: \(amountSecondScan ?? "N/A")")
+                    amountFirstScan = nil
+                    amountSecondScan = nil
+                    return amountValue
+                } else {
+                    print("DEBUG: Amount Mismatch. Retrying...")
+                    amountFirstScan = amountSecondScan
+                    amountSecondScan = nil
+                    return nil
+                }
+            }
         }
         return nil
     }
-    
+
     private func extractBarcode(from text: String) -> String? {
         let barcodeRegex = #"^\d{10}$"#
         if let match = text.range(of: barcodeRegex, options: .regularExpression) {
-            return String(text[match])
+            let barcodeValue = String(text[match])
+            
+            // Two-scan confirmation logic
+            if barcodeFirstScan == nil {
+                barcodeFirstScan = barcodeValue
+                print("DEBUG: Barcode First Scan: \(barcodeFirstScan ?? "N/A")")
+                return nil
+            } else {
+                barcodeSecondScan = barcodeValue
+                if barcodeFirstScan == barcodeSecondScan {
+                    print("DEBUG: Barcode Confirmed: \(barcodeSecondScan ?? "N/A")")
+                    barcodeFirstScan = nil
+                    barcodeSecondScan = nil
+                    return barcodeValue
+                } else {
+                    print("DEBUG: Barcode Mismatch. Retrying...")
+                    barcodeFirstScan = barcodeSecondScan
+                    barcodeSecondScan = nil
+                    return nil
+                }
+            }
         }
         return nil
     }
+
 }

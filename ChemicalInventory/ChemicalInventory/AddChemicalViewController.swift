@@ -190,9 +190,6 @@ class AddChemicalViewController: BaseViewController {
             switch labelText {
             case "Barcode:":
                 barcodeTextField = textField
-                // Disable keyboard input
-                barcodeTextField.inputView = UIView()
-                barcodeTextField.addTarget(self, action: #selector(openBarcodeScannerFromTextField), for: .editingDidBegin)
             case "Name:":
                 nameTextField = textField
             case "Cas Number:":
@@ -225,21 +222,21 @@ class AddChemicalViewController: BaseViewController {
         }
     }
     
-    @objc private func openBarcodeScannerFromTextField() {
-        let scannerVC = BarcodeScannerViewController()
-        scannerVC.modalPresentationStyle = .fullScreen
-        scannerVC.onBarcodeScanned = { [weak self] barcode in
-            guard let self = self else { return }
-            scannerVC.dismiss(animated: true) {
-                // Debug log for scanned barcode
-                print("DEBUG: Scanned barcode: \(barcode)")
-
-                // Set the barcode in the text field
-                self.barcodeTextField.text = barcode
-            }
-        }
-        present(scannerVC, animated: true)
-    }
+//    @objc private func openBarcodeScannerFromTextField() {
+//        let scannerVC = BarcodeScannerViewController()
+//        scannerVC.modalPresentationStyle = .fullScreen
+//        scannerVC.onBarcodeScanned = { [weak self] barcode in
+//            guard let self = self else { return }
+//            scannerVC.dismiss(animated: true) {
+//                // Debug log for scanned barcode
+//                print("DEBUG: Scanned barcode: \(barcode)")
+//
+//                // Set the barcode in the text field
+//                self.barcodeTextField.text = barcode
+//            }
+//        }
+//        present(scannerVC, animated: true)
+//    }
 
     
     @objc private func spaceFieldTapped() {
