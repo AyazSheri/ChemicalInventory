@@ -49,9 +49,30 @@ class SpacesViewController: BaseViewController, UITextFieldDelegate {
         super.viewDidLoad()
         print("DEBUG: SpacesViewController loaded with Room ID:", roomID)
         setPageTitle("Spaces")
+        navigationItem.hidesBackButton = true
         setupUI()
         fetchRoomDetails()
         addKeyboardDismissGesture()
+        
+        addSwipeBackGesture()
+        
+        print("DEBUG: Swipe-back gesture added for navigation.")
+    }
+    
+    private func addSwipeBackGesture() {
+        let edgePanGesture = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(handleSwipeBackGesture(_:)))
+        edgePanGesture.edges = .left // Trigger on left edge
+        edgePanGesture.delegate = self // Set the delegate for simultaneous recognition
+        view.addGestureRecognizer(edgePanGesture)
+        print("DEBUG: UIScreenEdgePanGestureRecognizer added for swipe-back.")
+    }
+
+    @objc private func handleSwipeBackGesture(_ gesture: UIScreenEdgePanGestureRecognizer) {
+        if gesture.state == .ended {
+            print("DEBUG: Edge swipe-back gesture triggered.")
+            removeHostingController() // Remove the side menu
+            navigationController?.popViewController(animated: true) // Navigate back
+        }
     }
     
     // MARK: - Setup UI
@@ -432,4 +453,13 @@ extension SpacesViewController {
     }
 }
 
-
+extension SpacesViewController: UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        // Allow the edge pan gesture to work with other gestures
+        if gestureRecognizer is UIScreenEdgePanGestureRecognizer {
+            print("DEBUG: Swipe-back gesture recognized simultaneously with another gesture.")
+            return true
+        }
+        return false
+    }
+}

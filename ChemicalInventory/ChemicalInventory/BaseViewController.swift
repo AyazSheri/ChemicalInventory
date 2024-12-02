@@ -231,7 +231,15 @@ class BaseViewController: UIViewController {
         }
     }
     
-    
+    func removeHostingController() {
+        guard let hostingController = hostingController else {
+            print("DEBUG: Hosting controller is already nil.")
+            return
+        }
+        print("DEBUG: Removing hosting controller from view.")
+        hostingController.view.removeFromSuperview()
+        self.hostingController = nil
+    }
 
 
 }

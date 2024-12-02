@@ -45,6 +45,86 @@ class NetworkManager {
         let name: String
     }
     
+    // Get all buildings
+    func fetchBuildings(completion: @escaping ([[String: Any]]?, Error?) -> Void) {
+        let endpoint = "\(baseURL)/buildings-fetch"
+        URLSession.shared.dataTask(with: URL(string: endpoint)!) { data, _, error in
+            if let error = error {
+                print("DEBUG: Error fetching buildings:", error)
+                completion(nil, error)
+                return
+            }
+            if let data = data, let response = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let buildings = response["buildings"] as? [[String: Any]] {
+                completion(buildings, nil)
+            } else {
+                completion(nil, nil)
+            }
+        }.resume()
+    }
+    
+    // Add room and update usersession
+    func addRoom(newRoomData: [String: Any], completion: @escaping (Bool, String?) -> Void) {
+        let endpoint = "\(baseURL)/add_room"
+        var request = URLRequest(url: URL(string: endpoint)!)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: newRoomData)
+
+        URLSession.shared.dataTask(with: request) { data, _, error in
+            if let error = error {
+                print("DEBUG: Error adding room:", error)
+                completion(false, error.localizedDescription)
+                return
+            }
+            if let data = data {
+                do {
+                    if let response = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let success = response["success"] as? Bool {
+                        let message = response["message"] as? String
+
+                        // If successful, update UserSession.pis
+                        if success, let updatedPI = response["updated_pi"] as? [String: Any] {
+                            self.updateUserSessionWithUpdatedPI(updatedPI)
+                        }
+
+                        completion(success, message)
+                    } else {
+                        print("DEBUG: Invalid response format.")
+                        completion(false, "Invalid response format.")
+                    }
+                } catch {
+                    print("DEBUG: Failed to parse response:", error)
+                    completion(false, "Failed to parse response.")
+                }
+            } else {
+                print("DEBUG: No data received from server.")
+                completion(false, "No data received from server.")
+            }
+        }.resume()
+    }
+
+    // Update PIs in usersession
+    private func updateUserSessionWithUpdatedPI(_ updatedPI: [String: Any]) {
+        // Directly access the currentPIs as UserSession.shared.pis is non-optional
+        var currentPIs = UserSession.shared.pis
+
+        // Update the relevant PI in UserSession.pis
+        if let updatedPIID = updatedPI["pi_id"] as? Int {
+            if let index = currentPIs.firstIndex(where: { ($0["pi_id"] as? Int) == updatedPIID }) {
+                currentPIs[index] = updatedPI
+            } else {
+                // Add the updated PI if it's not already in the list
+                currentPIs.append(updatedPI)
+            }
+        }
+
+        // Save the updated PI data back to UserSession
+        UserSession.shared.pis = currentPIs
+        UserSession.shared.saveToUserDefaults()
+        print("DEBUG: UserSession.pis updated with new room data:", currentPIs)
+    }
+    
     // Update Contact name or Contact phone
     func updateRoomField(updateData: [String: String], completion: @escaping (Bool, String?) -> Void) {
         guard let url = URL(string: "\(baseURL)/rooms/update_field") else {

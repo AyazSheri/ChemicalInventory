@@ -9,6 +9,72 @@ from werkzeug.security import check_password_hash
 from db_models.models import db, User, PI, Room, Building
 from sqlalchemy import or_
 
+class AddRoomResource(Resource):
+    def post(self):
+        print("DEBUG: AddRoomResource endpoint called.")
+        data = request.get_json()
+        print("DEBUG: Received data:", data)
+
+        pi_id = data.get("pi_id")
+        room_number = data.get("room_number")
+        building_id = data.get("building_id")
+        contact_name = data.get("contact_name")
+        contact_phone = data.get("contact_phone")
+
+        # Validate required fields
+        if not pi_id or not room_number or not building_id:
+            return jsonify({"success": False, "message": "PI ID, Room Number, and Building ID are required"}), 400
+
+        # Add new room
+        new_room = Room(
+            building_id=building_id,
+            room_number=room_number,
+            pi_id=pi_id,
+            contact_name=contact_name,
+            contact_phone=contact_phone
+        )
+        db.session.add(new_room)
+        db.session.commit()
+
+        print(f"DEBUG: Added new room with ID: {new_room.id}")
+
+        # Fetch updated data for the associated PI
+        pi = PI.query.get(pi_id)
+        if not pi:
+            return jsonify({"success": False, "message": "PI not found"}), 404
+
+        rooms = Room.query.filter_by(pi_id=pi.id).all()
+        room_data = [
+            {
+                "room_id": room.id,
+                "room_number": room.room_number,
+                "building_name": Building.query.get(room.building_id).name,
+                "contact_name": room.contact_name,
+                "contact_phone": room.contact_phone
+            }
+            for room in rooms
+        ]
+
+        updated_pi = {
+            "pi_id": pi.id,
+            "pi_name": pi.name,
+            "rooms": room_data
+        }
+
+        return jsonify({
+            "success": True,
+            "message": "Room added successfully",
+            "updated_pi": updated_pi
+        })
+
+class FetchBuildingsResource(Resource):
+    def get(self):
+        print("DEBUG: BuildingsResource endpoint called.")
+        buildings = Building.query.all()
+        result = [{"id": building.id, "name": building.name} for building in buildings]
+        print("DEBUG: Retrieved buildings:", result)
+        return jsonify({"success": True, "buildings": result})
+
 class RoomUpdateFieldResource(Resource):
     def post(self):
         print("DEBUG: RoomUpdateFieldResource endpoint called.")
@@ -685,6 +751,8 @@ class ChemicalsByRoom(Resource):
 
 # --- Add the new routes to your app ---
 def initialize_routes(api):
+    api.add_resource(FetchBuildingsResource, '/buildings-fetch')
+    api.add_resource(AddRoomResource, '/add_room')
     api.add_resource(RoomUpdateFieldResource, '/rooms/update_field')
     api.add_resource(ManageSpaceResource, '/manage_space')
     api.add_resource(RoomDetailsResource, '/rooms/details')

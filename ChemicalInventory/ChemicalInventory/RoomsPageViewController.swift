@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import SCLAlertView
 
 class RoomsPageViewController: BaseViewController {
     // MARK: - Properties
@@ -35,6 +36,8 @@ class RoomsPageViewController: BaseViewController {
         
         // Load Room Data
         loadRoomData(for: selectedPIIndex)
+        
+        
     }
     
     private func restoreSelections() {
@@ -246,6 +249,136 @@ class RoomsPageViewController: BaseViewController {
             return nil
         }
     }
+    
+    private func showAddRoomPopup() {
+        let appearance = SCLAlertView.SCLAppearance(
+            showCloseButton: false, // No close button
+            buttonsLayout: .vertical
+        )
+        let alert = SCLAlertView(appearance: appearance)
+
+        let roomNumberField = alert.addTextField("Enter Room Number")
+        let contactNameField = alert.addTextField("Enter Contact Name")
+        let contactPhoneField = alert.addTextField("Enter Contact Phone")
+        
+        // Shared variables for building selection
+        var selectedBuilding: [String: String?] = [:]
+        let buildingTextField = alert.addTextField("Select Building")
+        buildingTextField.isUserInteractionEnabled = true // Allow interaction
+        buildingTextField.textColor = .gray
+        buildingTextField.delegate = self // Prevent typing
+        buildingTextField.tag = 0 // Initialize with a default value of 0 (no building selected)
+
+        // Add tap gesture recognizer to the building text field
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(buildingFieldTapped(_:)))
+        buildingTextField.addGestureRecognizer(tapGesture)
+
+
+        alert.addButton("Save") {
+            print("DEBUG: Save Room triggered.")
+            print("DEBUG: Entered Room Number:", roomNumberField.text ?? "nil")
+            print("DEBUG: Entered Contact Name:", contactNameField.text ?? "nil")
+            print("DEBUG: Entered Contact Phone:", contactPhoneField.text ?? "nil")
+            print("DEBUG: Building ID in text field tag:", buildingTextField.tag)
+
+            // Validation
+            guard let roomNumber = roomNumberField.text, !roomNumber.isEmpty,
+                  buildingTextField.tag > 0, // Check the tag for a valid building ID
+                  let contactName = contactNameField.text, !contactName.isEmpty,
+                  let contactPhone = contactPhoneField.text, !contactPhone.isEmpty else {
+                print("DEBUG: Missing required fields for adding room.")
+                
+                // Show UIAlertController for validation
+                let validationAlert = UIAlertController(title: "Missing Fields",
+                                                        message: "Please fill out all fields.",
+                                                        preferredStyle: .alert)
+                validationAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                self.present(validationAlert, animated: true)
+                return // Do not proceed with saving
+            }
+
+            print("DEBUG: All fields are valid. Building ID:", buildingTextField.tag)
+
+            let newRoomData: [String: Any] = [
+                "pi_id": self.getSelectedPIID() ?? "", // Ensure this returns a valid value
+                "room_number": roomNumber,
+                "building_id": buildingTextField.tag, // Use the tag to get the building ID
+                "contact_name": contactName,
+                "contact_phone": contactPhone
+            ]
+            print("DEBUG: Data being sent to backend:", newRoomData)
+
+            // Send data to backend
+            NetworkManager.shared.addRoom(newRoomData: newRoomData) { success, message in
+                if success {
+                    print("DEBUG: Room added successfully. Message: \(message ?? "No message")")
+                    DispatchQueue.main.async {
+                        self.loadRoomData(for: self.selectedPIIndex) // Refresh room list
+                    }
+                } else {
+                    print("DEBUG: Failed to add room. Error: \(message ?? "Unknown error")")
+                    let errorAlert = SCLAlertView()
+                    errorAlert.showError("Error", subTitle: message ?? "Failed to add room.")
+                }
+            }
+        }
+
+        alert.addButton("Cancel") {
+            print("DEBUG: Add Room canceled.")
+        }
+
+        alert.showEdit("Add Room", subTitle: "Enter room details.")
+    }
+    
+    
+
+    @objc private func buildingFieldTapped(_ sender: UITapGestureRecognizer) {
+        guard let textField = sender.view as? UITextField else {
+            print("DEBUG: No text field associated with tap gesture.")
+            return
+        }
+
+        // Present the action sheet for building selection
+        showBuildingActionSheet { selectedBuilding in
+            print("DEBUG: Selected Building:", selectedBuilding)
+            textField.text = selectedBuilding["name"] ?? "Select Building"
+            if let buildingIDString = selectedBuilding["id"] ?? nil, let buildingID = Int(buildingIDString) {
+                textField.tag = buildingID // Assign the building ID to the tag
+            } else {
+                textField.tag = 0 // Default value if unwrapping fails
+            }
+        }
+    }
+    
+
+
+    private func showBuildingActionSheet(completion: @escaping ([String: String?]) -> Void) {
+        NetworkManager.shared.fetchBuildings { buildings, error in
+            guard let buildings = buildings else {
+                print("DEBUG: Failed to fetch buildings:", error ?? "Unknown error")
+                return
+            }
+
+            DispatchQueue.main.async {
+                let actionSheet = UIAlertController(title: "Select Building", message: nil, preferredStyle: .actionSheet)
+
+                for building in buildings {
+                    guard let buildingID = building["id"] as? Int,
+                          let buildingName = building["name"] as? String else {
+                        continue
+                    }
+
+                    actionSheet.addAction(UIAlertAction(title: buildingName, style: .default) { _ in
+                        print("DEBUG: Selected Building: \(buildingName) with ID \(buildingID)")
+                        completion(["id": "\(buildingID)", "name": buildingName])
+                    })
+                }
+
+                actionSheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+                self.present(actionSheet, animated: true)
+            }
+        }
+    }
 
 
 }
@@ -282,20 +415,25 @@ extension RoomsPageViewController: UITableViewDelegate, UITableViewDataSource {
                 // Pass the room ID to SpacesViewController
                 spacesVC.roomID = room.roomID
 
-                // Replace the navigation stack with SpacesViewController
-                navigationController?.setViewControllers([spacesVC], animated: true)
+                navigationController?.pushViewController(spacesVC, animated: true)
             } else {
                 print("DEBUG: Failed to instantiate SpacesViewController.")
             }
         } else {
-            // Handle "Add Room" option
-            if let piID = getSelectedPIID() {
-                print("DEBUG: Add room to PI:", piID)
-            } else {
-                print("DEBUG: PI ID not found")
-            }
+            print("DEBUG: Add Room option selected.")
+            showAddRoomPopup()
         }
     }
 
 
+}
+
+extension RoomsPageViewController: UITextFieldDelegate {
+    func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
+        // Allow only interaction with the "buildingTextField" through tapping
+        if textField.placeholder == "Select Building" {
+            return false
+        }
+        return true
+    }
 }
