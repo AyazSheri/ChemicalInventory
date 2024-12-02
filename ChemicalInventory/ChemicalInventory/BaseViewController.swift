@@ -197,15 +197,14 @@ class BaseViewController: UIViewController {
     }
     
     private func navigateToProfile() {
-        if let profileVC = storyboard?.instantiateViewController(withIdentifier: "PIProfilePageViewController") as? PIProfilePageViewController {
-            print("DEBUG: Navigating to PIProfilePageViewController")
-            navigationController?.setViewControllers([profileVC], animated: true)
+        if let roomsVC = storyboard?.instantiateViewController(withIdentifier: "PIProfilePageViewController") as? RoomsPageViewController {
+            print("DEBUG: Navigating to RoomsPageViewController")
+            navigationController?.setViewControllers([roomsVC], animated: true)
         } else {
-            print("DEBUG: Failed to instantiate PIProfilePageViewController")
+            print("DEBUG: Failed to instantiate RoomsPageViewController")
         }
     }
-    
-    
+
     
     private func logout() {
         print("DEBUG: Starting logout process...")

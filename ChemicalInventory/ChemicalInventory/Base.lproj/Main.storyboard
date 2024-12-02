@@ -187,20 +187,41 @@
             </objects>
             <point key="canvasLocation" x="54.198473282442748" y="-34.507042253521128"/>
         </scene>
-        <!--Profile Page View Controller-->
+        <!--Rooms Page View Controller-->
         <scene sceneID="vZE-5x-fpl">
             <objects>
-                <viewController storyboardIdentifier="PIProfilePageViewController" id="bQF-mh-YRF" customClass="PIProfilePageViewController" customModule="ChemicalInventory" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="PIProfilePageViewController" id="bQF-mh-YRF" customClass="RoomsPageViewController" customModule="ChemicalInventory" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="8oD-2o-6yj">
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Kg4-LH-6RD">
+                                <rect key="frame" x="0.0" y="175" width="300" height="35"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <state key="normal" title="Button"/>
+                                <buttonConfiguration key="configuration" style="plain" titleAlignment="automatic">
+                                    <attributedString key="attributedTitle"/>
+                                </buttonConfiguration>
+                            </button>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Name: " lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Yqs-hd-wVv">
+                                <rect key="frame" x="16" y="96" width="300" height="23"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                        </subviews>
                         <viewLayoutGuide key="safeArea" id="KDN-Iw-uY5"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                     </view>
+                    <connections>
+                        <outlet property="nameLabel" destination="Yqs-hd-wVv" id="Nxi-ZL-wys"/>
+                        <outlet property="piButton" destination="Kg4-LH-6RD" id="H3K-lT-pVt"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="HMb-X0-Ztd" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1268" y="-694"/>
+            <point key="canvasLocation" x="1267.9389312977098" y="-694.36619718309862"/>
         </scene>
     </scenes>
     <resources>

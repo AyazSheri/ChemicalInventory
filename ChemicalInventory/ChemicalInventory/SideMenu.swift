@@ -37,7 +37,7 @@ struct Sidebar: View {
                 onNavigate?("Profile")
                 isMenuOpen = false // Close menu
             }) {
-                Text("Profile")
+                Text("Rooms")
                     .font(.headline)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, alignment: .leading) // Ensure left alignment
