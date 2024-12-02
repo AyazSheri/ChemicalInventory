@@ -13,6 +13,7 @@ class AddChemicalViewController: BaseViewController {
     @IBOutlet weak var nameLabel: UILabel!
     @IBOutlet weak var piButton: UIButton!
     @IBOutlet weak var roomButton: UIButton!
+    @IBOutlet weak var scanLabelButton: UIButton!
     
     
     // Data for Dropdowns
@@ -33,7 +34,8 @@ class AddChemicalViewController: BaseViewController {
     private var amountTextField: UITextField!
     private var expirationDateTextField: UITextField!
     private var spaceTextField: UITextField!
-    private var spaceData: [(name: String, id: Int)] = [] // To store spaces
+    private var spaceData: [(name: String, id: Int)] = []
+    private var addChemicalButton: UIButton!
 
     
     override func viewDidLoad() {
@@ -119,8 +121,26 @@ class AddChemicalViewController: BaseViewController {
         setupButton(button: roomButton, initialTitle: roomList[selectedRoomIndex])
         
         addDynamicFields()
+        setupAddChemicalButton()
         addKeyboardDismissGesture()
 
+    }
+    
+    private func setupScanLabelButtonLayout() {
+        guard let spaceTextField = spaceTextField else {
+            print("DEBUG: spaceTextField is not initialized yet.")
+            return
+        }
+
+        // Remove existing constraints (if any)
+        scanLabelButton.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            scanLabelButton.topAnchor.constraint(equalTo: spaceTextField.bottomAnchor, constant: 20),
+            scanLabelButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            scanLabelButton.widthAnchor.constraint(equalToConstant: 200),
+            scanLabelButton.heightAnchor.constraint(equalToConstant: 44)
+        ])
     }
     
     
@@ -168,6 +188,106 @@ class AddChemicalViewController: BaseViewController {
         button.translatesAutoresizingMaskIntoConstraints = false
     }
     
+    private func setupAddChemicalButton() {
+        addChemicalButton = UIButton(type: .system)
+        addChemicalButton.setTitle("Add Chemical", for: .normal)
+        addChemicalButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 16)
+        addChemicalButton.setTitleColor(.white, for: .normal)
+        addChemicalButton.backgroundColor = .systemBlue
+        addChemicalButton.layer.cornerRadius = 8
+        addChemicalButton.translatesAutoresizingMaskIntoConstraints = false
+        addChemicalButton.addTarget(self, action: #selector(addChemicalButtonTapped), for: .touchUpInside)
+
+        view.addSubview(addChemicalButton)
+
+        // Set constraints
+        NSLayoutConstraint.activate([
+            addChemicalButton.topAnchor.constraint(equalTo: scanLabelButton.bottomAnchor, constant: 20),
+            addChemicalButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            addChemicalButton.widthAnchor.constraint(equalToConstant: 200),
+            addChemicalButton.heightAnchor.constraint(equalToConstant: 44)
+        ])
+    }
+    
+    @objc private func addChemicalButtonTapped() {
+        print("DEBUG: Add Chemical button tapped.")
+
+        guard let name = nameTextField.text, !name.isEmpty, name != "N/A",
+              let casNumber = casNumberTextField.text, !casNumber.isEmpty,
+              let barcode = barcodeTextField.text, !barcode.isEmpty,
+              let roomIndex = roomList.indices.contains(selectedRoomIndex) ? selectedRoomIndex : nil,
+              let roomID = getRoomID(for: piList[selectedPIIndex], roomNumber: roomList[roomIndex].split(separator: ",").first?.trimmingCharacters(in: .whitespaces) ?? "") else {
+            print("DEBUG: Validation failed. Missing or invalid fields.")
+            showAlert(title: "Validation Error", message: "Please fill in all required fields correctly.")
+            return
+        }
+
+        // Parse amount and extract unit
+        guard let amountText = amountTextField.text, !amountText.isEmpty else {
+            print("DEBUG: Amount field is empty.")
+            showAlert(title: "Validation Error", message: "Amount is required.")
+            return
+        }
+
+        let amountPattern = "^([0-9]*\\.?[0-9]+)([a-zA-Z]*)$"
+        let regex = try? NSRegularExpression(pattern: amountPattern)
+        if let match = regex?.firstMatch(in: amountText, range: NSRange(location: 0, length: amountText.count)),
+           let amountRange = Range(match.range(at: 1), in: amountText),
+           let unitRange = Range(match.range(at: 2), in: amountText) {
+            let amount = Float(amountText[amountRange]) ?? 0
+            let unit = String(amountText[unitRange])
+
+            if amount <= 0 || unit.isEmpty {
+                print("DEBUG: Invalid amount or unit.")
+                showAlert(title: "Validation Error", message: "Amount must be greater than zero and include a valid unit.")
+                return
+            }
+
+            // Optional fields
+            let expirationDate = expirationDateTextField.text?.isEmpty == false ? expirationDateTextField.text : nil
+            let spaceID = spaceTextField.tag > 0 ? spaceTextField.tag : nil
+
+            // Print collected data
+            print("DEBUG: Collected Data:")
+            print("Name:", name)
+            print("CAS Number:", casNumber)
+            print("Barcode:", barcode)
+            print("Room ID:", roomID)
+            print("Space ID:", spaceID ?? "N/A")
+            print("Amount:", amount)
+            print("Unit:", unit)
+            print("Expiration Date:", expirationDate ?? "N/A")
+
+            // Create chemicalData
+            let chemicalData: [String: Any] = [
+                "name": name,
+                "cas_number": casNumber,
+                "barcode": barcode,
+                "room_id": roomID,
+                "space_id": spaceID ?? NSNull(),
+                "amount": amount,
+                "unit": unit,
+                "expiration_date": expirationDate ?? NSNull()
+            ]
+
+            print("DEBUG: Prepared chemical data:", chemicalData)
+
+            // Call backend API to add chemical
+            NetworkManager.shared.addChemical(chemicalData: chemicalData) { success, errorMessage in
+                DispatchQueue.main.async {
+                    if success {
+                        self.showAlert(title: "Success", message: "Chemical added successfully.")
+                    } else {
+                        self.showAlert(title: "Error", message: errorMessage ?? "Failed to add chemical.")
+                    }
+                }
+            }
+        } else {
+            print("DEBUG: Failed to parse amount or unit.")
+            showAlert(title: "Validation Error", message: "Amount must include a numeric value followed by a unit (e.g., '10kg').")
+        }
+    }
+    
     private func addDynamicFields() {
         let labels = ["Barcode:", "Name:", "Cas Number:", "Amount:", "Expiration Date:", "Space:"]
         var previousView: UIView = roomButton // Start below roomButton
@@ -202,8 +322,8 @@ class AddChemicalViewController: BaseViewController {
             case "Space:":
                 spaceTextField = textField
                 // Disable keyboard input
-                spaceTextField.inputView = UIView()
-                spaceTextField.addTarget(self, action: #selector(spaceFieldTapped), for: .editingDidBegin)
+                spaceTextField.delegate = self
+                spaceTextField.tag = 0
             default:
                 break
             }
@@ -221,6 +341,7 @@ class AddChemicalViewController: BaseViewController {
 
             previousView = label
         }
+        setupScanLabelButtonLayout()
     }
     
 //    @objc private func openBarcodeScannerFromTextField() {
@@ -250,7 +371,7 @@ class AddChemicalViewController: BaseViewController {
         // Retrieve the selected room based on the index
         let selectedRoomName = roomList[selectedRoomIndex] // E.g., "3329, Harris, Rangel and Martinez"
         let selectedRoomNumber = selectedRoomName.split(separator: ",").first?.trimmingCharacters(in: .whitespaces) ?? ""
-        
+
         // Get the room ID for the selected PI and room
         let roomId = getRoomID(for: piList[selectedPIIndex], roomNumber: selectedRoomNumber)
         guard let validRoomId = roomId else {
@@ -262,7 +383,16 @@ class AddChemicalViewController: BaseViewController {
         NetworkManager.shared.fetchSpaces(for: validRoomId) { spaces in
             DispatchQueue.main.async {
                 self.spaceData = spaces.map { ($0.name, $0.id) }
-                self.showSpaceDropdown()
+
+                if self.spaceData.isEmpty {
+                    // Show alert if no spaces are available
+                    let alert = UIAlertController(title: "No Spaces Available", message: "No spaces are associated with this room.", preferredStyle: .alert)
+                    alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                    self.present(alert, animated: true)
+                } else {
+                    // Show dropdown if spaces exist
+                    self.showSpaceDropdown()
+                }
             }
         }
     }
@@ -278,6 +408,8 @@ class AddChemicalViewController: BaseViewController {
         for space in spaceData {
             alert.addAction(UIAlertAction(title: space.name, style: .default, handler: { _ in
                 self.spaceTextField.text = space.name
+                self.spaceTextField.tag = space.id
+                print("DEBUG: Selected space ID: \(space.id)")
             }))
         }
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
@@ -623,5 +755,16 @@ extension AddChemicalViewController {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
         self.present(alert, animated: true, completion: nil)
+    }
+}
+
+extension AddChemicalViewController: UITextFieldDelegate {
+    func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
+        if textField == spaceTextField {
+            print("DEBUG: Space field tapped.")
+            spaceFieldTapped() // Trigger the tap logic
+            return false // Prevent the cursor from appearing
+        }
+        return true // Allow other text fields to be editable
     }
 }

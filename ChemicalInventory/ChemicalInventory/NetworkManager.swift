@@ -10,8 +10,8 @@ import Foundation
 class NetworkManager {
     static let shared = NetworkManager()
     //private var baseURL = "http://127.0.0.1:5000" // local host
-    private var baseURL = "http://192.168.1.31:5000" // machine ip
-    //private var baseURL = "https://mobile-chemical-inventory-40584a411faf.herokuapp.com/" // online server
+    //private var baseURL = "http://192.168.1.31:5000" // machine ip
+    private var baseURL = "https://mobile-chemical-inventory-40584a411faf.herokuapp.com/" // online server
     func setBaseURL(to url: String) {
         baseURL = url
     }
@@ -43,6 +43,42 @@ class NetworkManager {
     struct Space: Decodable {
         let id: Int
         let name: String
+    }
+    
+    // Add Chemical to db
+    func addChemical(chemicalData: [String: Any], completion: @escaping (Bool, String?) -> Void) {
+        let endpoint = "\(baseURL)/add_chemical"
+        guard let url = URL(string: endpoint) else {
+            completion(false, "Invalid URL")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: chemicalData)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("DEBUG: Error adding chemical:", error.localizedDescription)
+                completion(false, "Failed to connect to server.")
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(false, "Invalid response from server.")
+                return
+            }
+
+            if httpResponse.statusCode == 201 {
+                completion(true, nil)
+            } else {
+                let message = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
+                let errorMessage = message?["message"] as? String ?? "Unknown error"
+                print("DEBUG: Server error:", errorMessage)
+                completion(false, errorMessage)
+            }
+        }.resume()
     }
     
     // Get all buildings

@@ -9,6 +9,84 @@ from werkzeug.security import check_password_hash
 from db_models.models import db, User, PI, Room, Building
 from sqlalchemy import or_
 
+class AddChemicalResource(Resource):
+    def post(self):
+        print("DEBUG: AddChemicalResource endpoint called.")
+        data = request.get_json()
+        print("DEBUG: Received data:", data)
+
+        # Extract fields
+        barcode = data.get('barcode')
+        name = data.get('name')
+        cas_number = data.get('cas_number')
+        room_id = data.get('room_id')
+        space_id = data.get('space_id')
+        amount = data.get('amount')
+        unit = data.get('unit')
+        expiration_date = data.get('expiration_date')
+
+        # Validation
+        if not barcode or not name or not cas_number or not room_id or not amount or not unit:
+            response = {'success': False, 'message': 'Missing required fields'}
+            print("DEBUG: Response before return:", response)
+            return response, 400
+
+        # Check for existing barcode
+        print(f"DEBUG: Checking for existing chemical with barcode {barcode}")
+        existing_chemical = Chemical.query.filter_by(barcode=barcode).first()
+        if existing_chemical:
+            print(f"DEBUG: Barcode {barcode} is already in use by chemical ID {existing_chemical.id}.")
+            response = {'success': False, 'message': 'This barcode is already in use.'}
+            print("DEBUG: Response before return:", response)
+            return response, 400
+        else:
+            print(f"DEBUG: No existing chemical found for barcode {barcode}")
+
+        # Parse expiration date
+        expiration_date_parsed = None
+        if expiration_date:
+            try:
+                expiration_date_parsed = datetime.strptime(expiration_date, "%Y-%m-%d")
+                print(f"DEBUG: Parsed expiration date: {expiration_date_parsed}")
+            except ValueError:
+                response = {'success': False, 'message': 'Invalid expiration date format. Use YYYY-MM-DD.'}
+                print("DEBUG: Response before return:", response)
+                return response, 400
+        else:
+            print("DEBUG: No expiration date provided.")
+
+        # Calculate total weight in pounds
+        total_weight_lbs = amount if unit.lower() in ['lb', 'lbs'] else amount * 2.20462
+        print(f"DEBUG: Calculated total weight in lbs: {total_weight_lbs}")
+
+        # Add the new chemical
+        try:
+            print("DEBUG: Attempting to add new chemical to database.")
+            new_chemical = Chemical(
+                name=name,
+                cas_number=cas_number,
+                barcode=barcode,
+                room_id=room_id,
+                space_id=space_id,
+                amount=amount,
+                unit=unit,
+                expiration_date=expiration_date_parsed,
+                total_weight_lbs=total_weight_lbs,
+            )
+            db.session.add(new_chemical)
+            db.session.commit()
+            print(f"DEBUG: New chemical added with ID: {new_chemical.id}")
+
+            response = {'success': True, 'message': 'Chemical added successfully.'}
+            print("DEBUG: Response before return:", response)
+            return response, 201
+        except Exception as e:
+            print(f"DEBUG: Exception occurred: {e}")
+            db.session.rollback()
+            response = {'success': False, 'message': 'Failed to add chemical due to a server error.'}
+            print("DEBUG: Response before return:", response)
+            return response, 500
+
 class AddRoomResource(Resource):
     def post(self):
         print("DEBUG: AddRoomResource endpoint called.")
@@ -751,6 +829,7 @@ class ChemicalsByRoom(Resource):
 
 # --- Add the new routes to your app ---
 def initialize_routes(api):
+    api.add_resource(AddChemicalResource, '/add_chemical')
     api.add_resource(FetchBuildingsResource, '/buildings-fetch')
     api.add_resource(AddRoomResource, '/add_room')
     api.add_resource(RoomUpdateFieldResource, '/rooms/update_field')

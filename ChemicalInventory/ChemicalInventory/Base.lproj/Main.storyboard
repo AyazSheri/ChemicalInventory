@@ -163,6 +163,7 @@
                         <outlet property="nameLabel" destination="ZT1-75-9zH" id="eVH-Ru-AxT"/>
                         <outlet property="piButton" destination="s86-MD-3J7" id="N5L-yT-Sdm"/>
                         <outlet property="roomButton" destination="MaE-P2-erq" id="qnE-te-ved"/>
+                        <outlet property="scanLabelButton" destination="0hc-sO-Som" id="exd-Hr-TMY"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="nPu-5E-u5r" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>

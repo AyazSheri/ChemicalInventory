@@ -77,16 +77,4 @@ class Chemical(db.Model):
     total_weight_lbs = db.Column(db.Float, nullable=False)
     space = db.relationship('Space', backref='chemicals', lazy=True)
 
-    @staticmethod
-    def generate_barcode():
-        """Generate a unique 10-digit barcode starting with 0000000001."""
-        last_chemical = Chemical.query.order_by(Chemical.id.desc()).first()
-        if last_chemical:
-            last_barcode = int(last_chemical.barcode)
-        else:
-            last_barcode = 0
-        return f'{last_barcode + 1:010d}'
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.barcode = Chemical.generate_barcode()
+    
