@@ -148,14 +148,27 @@ class BaseViewController: UIViewController {
 
             // Show or hide the dimming view
             self.dimmingView?.alpha = self.isMenuOpen ? 1 : 0
+            
         }) { _ in
             if !self.isMenuOpen {
                 self.dimmingView?.isHidden = true
+                self.setInteractionEnabled(true) // Re-enable interaction
             } else {
                 self.dimmingView?.isHidden = false
+                self.setInteractionEnabled(false) // Disable interaction
             }
         }
     }
+    
+    private func setInteractionEnabled(_ isEnabled: Bool) {
+        for subview in view.subviews {
+            // Exclude the hostingController (side menu) and dimmingView from being disabled
+            if subview !== hostingController?.view && subview !== dimmingView {
+                subview.isUserInteractionEnabled = isEnabled
+            }
+        }
+    }
+
 
 
     private func handleNavigation(destination: String) {
@@ -217,6 +230,8 @@ class BaseViewController: UIViewController {
             navigationController?.setViewControllers([loginVC], animated: true)
         }
     }
+    
+    
 
 
 }

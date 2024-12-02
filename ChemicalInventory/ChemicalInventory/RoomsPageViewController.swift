@@ -273,9 +273,22 @@ extension RoomsPageViewController: UITableViewDelegate, UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         if indexPath.row < roomList.count {
+            // Selected an existing room
             let room = roomList[indexPath.row]
-            print("DEBUG: Navigate to spaces for Room:", room.roomID)
+            print("DEBUG: Navigating to Spaces page for Room:", room.roomID)
+
+            // Instantiate SpacesViewController
+            if let spacesVC = storyboard?.instantiateViewController(withIdentifier: "SpacesViewController") as? SpacesViewController {
+                // Pass the room ID to SpacesViewController
+                spacesVC.roomID = room.roomID
+
+                // Replace the navigation stack with SpacesViewController
+                navigationController?.setViewControllers([spacesVC], animated: true)
+            } else {
+                print("DEBUG: Failed to instantiate SpacesViewController.")
+            }
         } else {
+            // Handle "Add Room" option
             if let piID = getSelectedPIID() {
                 print("DEBUG: Add room to PI:", piID)
             } else {
@@ -283,4 +296,6 @@ extension RoomsPageViewController: UITableViewDelegate, UITableViewDataSource {
             }
         }
     }
+
+
 }

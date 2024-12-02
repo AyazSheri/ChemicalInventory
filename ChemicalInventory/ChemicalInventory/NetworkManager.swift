@@ -45,6 +45,131 @@ class NetworkManager {
         let name: String
     }
     
+    // Update Contact name or Contact phone
+    func updateRoomField(updateData: [String: String], completion: @escaping (Bool, String?) -> Void) {
+        guard let url = URL(string: "\(baseURL)/rooms/update_field") else {
+            completion(false, "Invalid URL")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: updateData, options: [])
+        } catch {
+            completion(false, "Failed to encode request data")
+            return
+        }
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("DEBUG: Network error:", error.localizedDescription)
+                completion(false, error.localizedDescription)
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                completion(false, "Server error")
+                return
+            }
+            
+            completion(true, nil)
+        }
+        task.resume()
+    }
+
+
+    
+    // Add or Update Space
+    func manageSpace(spaceData: [String: Any], completion: @escaping (Bool, String?) -> Void) {
+        guard let url = URL(string: "\(baseURL)/manage_space") else {
+            completion(false, "Invalid URL")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: spaceData, options: [])
+        } catch {
+            completion(false, "Error serializing data: \(error.localizedDescription)")
+            return
+        }
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(false, error.localizedDescription)
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(false, "Invalid response")
+                return
+            }
+            
+            if httpResponse.statusCode == 200 {
+                print("DEBUG: Space managed successfully.")
+                completion(true, nil)
+            } else {
+                let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                print("DEBUG: Error managing space. Response: {errorMessage}")
+                completion(false, errorMessage)
+            }
+        }
+        task.resume()
+    }
+    
+    
+    func fetchRoomDetails(roomID: Int, completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
+        let url = URL(string: "\(baseURL)/rooms/details")! // Adjust the endpoint path
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = ["room_id": roomID]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        
+        print("DEBUG: Sending room details request for room ID:", roomID)
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("DEBUG: Network error occurred:", error.localizedDescription)
+                completion(false, nil, error.localizedDescription)
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let data = data else {
+                print("DEBUG: Invalid response or no data received.")
+                completion(false, nil, "Invalid response or no data received")
+                return
+            }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let success = json["success"] as? Bool, success {
+                    let roomData = json["room_data"] as? [String: Any]
+                    print("DEBUG: Successfully fetched room data:", roomData ?? "No data")
+                    completion(true, roomData, nil)
+                } else {
+                    let message = (try JSONSerialization.jsonObject(with: data) as? [String: Any])?["message"] as? String
+                    print("DEBUG: API error occurred:", message ?? "Unknown error")
+                    completion(false, nil, message)
+                }
+            } catch {
+                print("DEBUG: JSON parsing error:", error.localizedDescription)
+                completion(false, nil, error.localizedDescription)
+            }
+        }
+        task.resume()
+    }
+
+    
     func searchChemicals(query: String, filter: String, completion: @escaping (Result<[[String: Any]], NetworkError>) -> Void) {
         guard let url = URL(string: "\(baseURL)/search-chemical") else {
             completion(.failure(.invalidURL))

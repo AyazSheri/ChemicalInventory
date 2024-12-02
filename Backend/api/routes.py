@@ -9,6 +9,132 @@ from werkzeug.security import check_password_hash
 from db_models.models import db, User, PI, Room, Building
 from sqlalchemy import or_
 
+class RoomUpdateFieldResource(Resource):
+    def post(self):
+        print("DEBUG: RoomUpdateFieldResource endpoint called.")
+        
+        # Parse the request data
+        data = request.get_json()
+        print(f"DEBUG: Received data: {data}")
+        
+        room_id = data.get("room_id")
+        if not room_id:
+            return jsonify({"success": False, "message": "Room ID is required"}), 400
+        
+        room = Room.query.get(room_id)
+        if not room:
+            print(f"DEBUG: Room with ID {room_id} not found.")
+            return jsonify({"success": False, "message": "Room not found"}), 404
+        
+        # Update fields based on the key
+        if "contact_name" in data:
+            room.contact_name = data["contact_name"]
+            print(f"DEBUG: Updated contact_name to: {room.contact_name}")
+        if "contact_phone" in data:
+            room.contact_phone = data["contact_phone"]
+            print(f"DEBUG: Updated contact_phone to: {room.contact_phone}")
+        
+        try:
+            db.session.commit()
+            return jsonify({"success": True, "message": "Room updated successfully"})
+        except Exception as e:
+            print(f"DEBUG: Error while committing changes: {e}")
+            return jsonify({"success": False, "message": "Failed to update room"}), 500
+
+
+class ManageSpaceResource(Resource):
+    def post(self):
+        print("DEBUG: ManageSpaceResource endpoint called.")
+        
+        data = request.get_json()
+        print(f"DEBUG: Received data: {data}")
+        
+        space_id = data.get("id")
+        room_id = data.get("room_id")
+        description = data.get("description")
+        space_type = data.get("space_type")
+        space_identifier = data.get("space_id")
+
+        # Common validation
+        if not room_id:
+            return jsonify({"success": False, "message": "Room ID is required"}), 400
+
+        # Handle editing existing space
+        if space_id:
+            print(f"DEBUG: Editing space with ID: {space_id}")
+            space = Space.query.get(space_id)
+            if not space:
+                return jsonify({"success": False, "message": "Space not found"}), 404
+
+            # Update fields
+            space.description = description or space.description
+            space.space_type = space_type or space.space_type
+            space.space_id = space_identifier or space.space_id
+            db.session.commit()
+            print(f"DEBUG: Updated space: {space.id}")
+            return jsonify({"success": True, "message": "Space updated successfully"})
+
+        # Handle adding a new space
+        print("DEBUG: Adding a new space.")
+        new_space = Space(
+            room_id=room_id,
+            description=description,
+            space_type=space_type,
+            space_id=space_identifier
+        )
+        db.session.add(new_space)
+        db.session.commit()
+        print(f"DEBUG: Created new space with ID: {new_space.id}")
+        return jsonify({"success": True, "message": "Space created successfully", "id": new_space.id})
+
+class RoomDetailsResource(Resource):
+    def post(self):
+        print("DEBUG: RoomDetailsResource endpoint called.")
+        
+        # Get the request data
+        data = request.get_json()
+        print(f"DEBUG: Received request data: {data}")
+        
+        room_id = data.get("room_id")
+        if not room_id:
+            print("DEBUG: Room ID is missing in the request.")
+            return jsonify({"success": False, "message": "Room ID is required"}), 400
+        
+        try:
+            # Fetch room details
+            room = Room.query.get(room_id)
+            if not room:
+                print(f"DEBUG: No room found for room_id={room_id}")
+                return jsonify({"success": False, "message": "Room not found"}), 404
+            
+            building = Building.query.get(room.building_id)
+            spaces = Space.query.filter_by(room_id=room_id).all()
+            
+            # Prepare room data
+            room_data = {
+                "room_id": room.id,
+                "room_number": room.room_number,
+                "building_name": building.name if building else "Unknown",
+                "contact_name": room.contact_name or "",
+                "contact_phone": room.contact_phone or "",
+                "spaces": [
+                    {
+                        "id": space.id,
+                        "description": space.description or "",
+                        "space_type": space.space_type or "",
+                        "space_id": space.space_id or ""
+                    }
+                    for space in spaces
+                ]
+            }
+            print("DEBUG: Prepared room data:", room_data)
+            
+            return jsonify({"success": True, "room_data": room_data})
+        
+        except Exception as e:
+            print(f"DEBUG: Exception occurred: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+
 class SearchChemicalsResource(Resource):
     def post(self):
         print("DEBUG: SearchChemicalsResource endpoint called.")
@@ -559,6 +685,9 @@ class ChemicalsByRoom(Resource):
 
 # --- Add the new routes to your app ---
 def initialize_routes(api):
+    api.add_resource(RoomUpdateFieldResource, '/rooms/update_field')
+    api.add_resource(ManageSpaceResource, '/manage_space')
+    api.add_resource(RoomDetailsResource, '/rooms/details')
     api.add_resource(SearchChemicalsResource, '/search-chemical')
     api.add_resource(ChemicalDelete, '/chemicaldelete/<int:chemical_id>')
     api.add_resource(ChemicalEdit, '/chemicals/update')

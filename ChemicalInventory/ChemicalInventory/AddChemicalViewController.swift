@@ -119,6 +119,7 @@ class AddChemicalViewController: BaseViewController {
         setupButton(button: roomButton, initialTitle: roomList[selectedRoomIndex])
         
         addDynamicFields()
+        addKeyboardDismissGesture()
 
     }
     
@@ -602,17 +603,19 @@ class AddChemicalViewController: BaseViewController {
         let cleanString = regex?.stringByReplacingMatches(in: string, options: [], range: range, withTemplate: "") ?? string
         return cleanString
     }
-
-
-
-
-
-
-
-
-
-
     
+    private func addKeyboardDismissGesture() {
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tapGesture.cancelsTouchesInView = false
+        view.addGestureRecognizer(tapGesture)
+    }
+
+    @objc private func dismissKeyboard() {
+        print("DEBUG: Tap detected, dismissing keyboard.")
+        self.view.endEditing(true)
+    }
+
+  
 }
 
 extension AddChemicalViewController {
