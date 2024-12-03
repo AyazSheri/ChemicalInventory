@@ -204,6 +204,7 @@ class SearchViewController: UIViewController, UISearchBarDelegate {
                 let barcode = chemical["barcode"] as? String ?? "Unknown"
                 let room = chemical["room_number"] as? String ?? "Unknown"
                 let building = chemical["building_name"] as? String ?? "Unknown"
+                let roomID = chemical["room_id"] as? Int ?? -1
 
                 // Debugging: Print each chemical's details
                 print("DEBUG: Adding button for chemical - Name: \(name), Barcode: \(barcode), Room: \(room), Building: \(building)")
@@ -216,6 +217,7 @@ class SearchViewController: UIViewController, UISearchBarDelegate {
                 button.addTarget(self, action: #selector(resultButtonTapped(_:)), for: .touchUpInside)
 
                 button.accessibilityIdentifier = barcode
+                button.accessibilityValue = "\(roomID)"
 
                 resultsStackView.addArrangedSubview(button)
             }
@@ -228,43 +230,19 @@ class SearchViewController: UIViewController, UISearchBarDelegate {
 
 
     @objc private func resultButtonTapped(_ sender: UIButton) {
-        // Retrieve the full barcode from the button's accessibilityIdentifier
-        if let barcode = sender.accessibilityIdentifier {
-            print("DEBUG: Button tapped with barcode: \(barcode)")
-            checkChemicalSearch(barcode: barcode)
+        if let barcode = sender.accessibilityIdentifier,
+           let roomIDString = sender.accessibilityValue,
+           let roomID = Int(roomIDString) {
+            print("DEBUG: Button tapped with barcode: \(barcode), Room ID: \(roomID)")
+            checkChemicalSearch(barcode: barcode, roomID: roomID)
         } else {
-            print("DEBUG: Barcode not found for the tapped button.")
+            print("DEBUG: Barcode or Room ID not found for the tapped button.")
         }
     }
 
     
-    func checkChemicalSearch(barcode: String) {
-        // Fetch the selected PI and room indices from UserDefaults
-        let selectedPIIndex = UserDefaults.standard.integer(forKey: "selectedPIIndex")
-        let selectedRoomIndex = UserDefaults.standard.integer(forKey: "selectedRoomIndex")
-
-        // Validate PI and Room data from UserSession
-        guard selectedPIIndex < UserSession.shared.pis.count else {
-            print("DEBUG: Invalid selectedPIIndex \(selectedPIIndex).")
-            return
-        }
-
-        let selectedPI = UserSession.shared.pis[selectedPIIndex]
-        guard let piName = selectedPI["pi_name"] as? String,
-              let rooms = selectedPI["rooms"] as? [[String: Any]],
-              selectedRoomIndex < rooms.count else {
-            print("DEBUG: Invalid selectedRoomIndex \(selectedRoomIndex) or missing room data.")
-            return
-        }
-
-        let selectedRoom = rooms[selectedRoomIndex]
-        guard let roomID = selectedRoom["room_id"] as? Int,
-              let roomNumber = selectedRoom["room_number"] as? String else {
-            print("DEBUG: Room ID or room number not found for selectedRoomIndex \(selectedRoomIndex).")
-            return
-        }
-
-        print("DEBUG: Selected PI: \(piName), Room: \(roomNumber), Room ID: \(roomID).")
+    func checkChemicalSearch(barcode: String, roomID: Int) {
+        print("DEBUG: Checking chemical with Barcode: \(barcode), Room ID: \(roomID)")
 
         // Call the NetworkManager to check the chemical
         NetworkManager.shared.checkChemical(barcode: barcode, selectedRoomID: roomID) { result in
@@ -274,9 +252,14 @@ class SearchViewController: UIViewController, UISearchBarDelegate {
                 switch result {
                 case .success(let chemicalInfo):
                     print("DEBUG: Successfully fetched chemical info: \(chemicalInfo)")
+                    
+                    // Add barcode to the chemicalInfo dictionary
+                    var updatedChemicalInfo = chemicalInfo
+                    updatedChemicalInfo["barcode"] = barcode
+                    print("DEBUG: Successfully updated chemical info: \(updatedChemicalInfo)")
 
-                    // Use the retrieved chemical information to display the popup
-                    ChemicalPopupManager.shared.showChemicalInfoPopupSearch(chemicalInfo: chemicalInfo, in: self)
+                    // Display the chemical info popup
+                    ChemicalPopupManager.shared.showChemicalInfoPopupSearch(chemicalInfo: updatedChemicalInfo, in: self)
 
                 case .failure(let error):
                     print("DEBUG: Error received: \(error.errorMessage)")

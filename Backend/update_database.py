@@ -1,8 +1,8 @@
 import random
-from db_models.models import db, Building, Room, Space
+from db_models.models import db, Building, Space
 from app import app
 
-# Lists of building codes and space descriptions
+# Lists of building codes and space types
 BUILDING_CODES = [
     "AAB", "AB", "ACC", "AEIVA", "ALGEN", "ALUM", "ARCL", "ASC", "BBRB", "BDB",
     "BELL", "BNTH", "BRDGS", "BREM", "BRPB", "BRTW", "BUR", "BZ2H", "CBSE",
@@ -18,36 +18,26 @@ BUILDING_CODES = [
     "OHS", "OLB", "OSB", "OSC"
 ]
 
-SPACE_DESCRIPTIONS = [
-    "Shelf A", "Shelf B", "Shelf C", "Table A", "Table B", "Table C",
-    "West Wall", "East Wall"
-]
+SPACE_TYPES = ["Non-Hazardous", "Radioactive", "Hazardous", "Toxic", "Non-Toxic"]
 
 def update_database():
     try:
-        # Update Building names
-        print("Updating Building names...")
-        buildings = Building.query.all()
-        for building in buildings:
-            random_code = random.choice(BUILDING_CODES)
-            building.name = random_code
-            print(f"Updated Building ID {building.id} to Name {building.name}")
+        # Add new buildings if they don't exist
+        print("Adding new buildings...")
+        for code in BUILDING_CODES:
+            existing_building = Building.query.filter_by(name=code).first()
+            if not existing_building:
+                new_building = Building(name=code)
+                db.session.add(new_building)
+                print(f"Added new Building: {code}")
 
-        # Update Space descriptions
-        print("Updating Space descriptions...")
+        # Update Space types
+        print("Updating Space types...")
         spaces = Space.query.all()
         for space in spaces:
-            random_description = random.choice(SPACE_DESCRIPTIONS)
-            space.description = random_description
-            print(f"Updated Space ID {space.id} to Description {space.description}")
-
-        # Update Room contact phones
-        print("Updating Room contact phones...")
-        rooms = Room.query.all()
-        for room in rooms:
-            random_phone = f"205{random.randint(1000000, 9999999)}"
-            room.contact_phone = random_phone
-            print(f"Updated Room ID {room.id} to Contact Phone {room.contact_phone}")
+            random_type = random.choice(SPACE_TYPES)
+            space.space_type = random_type
+            print(f"Updated Space ID {space.id} to Type {space.space_type}")
 
         # Commit changes to the database
         db.session.commit()

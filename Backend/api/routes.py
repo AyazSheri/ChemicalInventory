@@ -365,6 +365,7 @@ class SearchChemicalsResource(Resource):
                     "barcode": chemical.barcode,
                     "room_number": Room.query.get(chemical.room_id).room_number,
                     "building_name": Building.query.get(Room.query.get(chemical.room_id).building_id).name,
+                    "room_id": chemical.room_id,
                 }
                 for chemical in chemicals
             ]

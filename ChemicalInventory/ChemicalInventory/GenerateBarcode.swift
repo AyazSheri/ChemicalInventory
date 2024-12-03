@@ -1,56 +1,67 @@
-//import UIKit
-import CoreImage
 import UIKit
+import CoreImage
+
+struct StickerDimensions {
+    static let stickerWidth: CGFloat = 26 * 2.835 // 26mm in points
+    static let stickerHeight: CGFloat = 13 * 2.835 // 13mm in points
+    static let barcodeWidth: CGFloat = 22 * 2.835 // 22mm in points
+    static let barcodeHeight: CGFloat = 4 * 2.835 // 4mm in points
+    static let topLabelFontSize: CGFloat = 2.5 * 2.835 // 2.5mm in points
+    static let bottomLabelFontSize: CGFloat = 2 * 2.835 // 2mm in points
+}
 
 class BarcodeGenerator {
     
-    /// Generates a single composite image containing the barcode and labels.
-    func generateCompositeBarcodeImage(
-        barcodeString: String,
-        topLabel: String,
-        bottomLabel: String,
-        size: CGSize
-    ) -> UIImage? {
+    /// Generates a barcode sticker with a white background, top label, barcode, and bottom label.
+    func generateBarcodeSticker(barcodeString: String) -> UIImage? {
+        let size = CGSize(width: StickerDimensions.stickerWidth, height: StickerDimensions.stickerHeight)
+        
         guard let barcodeImage = createBarcodeImage(from: barcodeString) else {
             print("Failed to create barcode image")
             return nil
         }
-        
+
         UIGraphicsBeginImageContextWithOptions(size, false, 0)
         
-        // Define label attributes
-        let labelFontSize: CGFloat = size.height * 0.05 // Dynamic font size
-        let labelFont = UIFont.systemFont(ofSize: labelFontSize)
-        let labelAttributes: [NSAttributedString.Key: Any] = [
-            .font: labelFont,
+        // Draw white background
+        let context = UIGraphicsGetCurrentContext()
+        context?.setFillColor(UIColor.white.cgColor)
+        context?.fill(CGRect(origin: .zero, size: size))
+        
+        // Draw top label
+        let topLabel = "UAB EHS CIS"
+        let topLabelFont = UIFont.systemFont(ofSize: StickerDimensions.topLabelFontSize)
+        let topLabelAttributes: [NSAttributedString.Key: Any] = [
+            .font: topLabelFont,
             .foregroundColor: UIColor.black
         ]
-        
-        // Calculate positions and sizes
-        let topLabelHeight = (topLabel as NSString).size(withAttributes: labelAttributes).height
-        let barcodeHeight = size.height * 0.6
-        let verticalSpacing = size.height * 0.05
-        let barcodeSize = CGSize(width: size.width * 0.8, height: barcodeHeight)
-        
+        let topLabelSize = (topLabel as NSString).size(withAttributes: topLabelAttributes)
         let topLabelPoint = CGPoint(
-            x: (size.width - (topLabel as NSString).size(withAttributes: labelAttributes).width) / 2,
-            y: verticalSpacing
+            x: (size.width - topLabelSize.width) / 2,
+            y: 2 // Small margin from the top
         )
+        (topLabel as NSString).draw(at: topLabelPoint, withAttributes: topLabelAttributes)
         
+        // Draw barcode
+        let barcodeSize = CGSize(width: StickerDimensions.barcodeWidth, height: StickerDimensions.barcodeHeight)
         let barcodePoint = CGPoint(
             x: (size.width - barcodeSize.width) / 2,
-            y: topLabelPoint.y + topLabelHeight + verticalSpacing
+            y: topLabelPoint.y + topLabelSize.height + 2 // Add margin
         )
-        
-        let bottomLabelPoint = CGPoint(
-            x: (size.width - (bottomLabel as NSString).size(withAttributes: labelAttributes).width) / 2,
-            y: barcodePoint.y + barcodeHeight + verticalSpacing
-        )
-        
-        // Draw components
-        (topLabel as NSString).draw(at: topLabelPoint, withAttributes: labelAttributes)
         barcodeImage.resized(to: barcodeSize).draw(in: CGRect(origin: barcodePoint, size: barcodeSize))
-        (bottomLabel as NSString).draw(at: bottomLabelPoint, withAttributes: labelAttributes)
+        
+        // Draw bottom label (barcode number)
+        let bottomLabelFont = UIFont.systemFont(ofSize: StickerDimensions.bottomLabelFontSize)
+        let bottomLabelAttributes: [NSAttributedString.Key: Any] = [
+            .font: bottomLabelFont,
+            .foregroundColor: UIColor.black
+        ]
+        let bottomLabelSize = (barcodeString as NSString).size(withAttributes: bottomLabelAttributes)
+        let bottomLabelPoint = CGPoint(
+            x: (size.width - bottomLabelSize.width) / 2,
+            y: barcodePoint.y + barcodeSize.height + 2 // Add margin
+        )
+        (barcodeString as NSString).draw(at: bottomLabelPoint, withAttributes: bottomLabelAttributes)
         
         let compositeImage = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
@@ -71,45 +82,40 @@ class BarcodeGenerator {
         }
         return nil
     }
-
-    /// Prints the barcode as a composite image.
-    func printBarcode(
-        barcodeString: String,
-        topLabel: String,
-        bottomLabel: String,
-        size: CGSize
-    ) {
-        guard let compositeImage = generateCompositeBarcodeImage(
-            barcodeString: barcodeString,
-            topLabel: topLabel,
-            bottomLabel: bottomLabel,
-            size: size
-        ) else {
-            print("Failed to generate composite image")
+    
+    /// Displays the barcode sticker in a UIAlertController.
+    func showBarcodePopup(barcodeString: String, in viewController: UIViewController) {
+        let stickerSize = CGSize(width: StickerDimensions.stickerWidth, height: StickerDimensions.stickerHeight)
+        
+        guard let barcodeSticker = generateBarcodeSticker(barcodeString: barcodeString) else {
+            print("Failed to generate barcode sticker")
             return
         }
         
-        guard UIPrintInteractionController.isPrintingAvailable else {
-            print("Printing is not available on this device.")
-            return
-        }
+        let imageView = UIImageView(image: barcodeSticker)
+        imageView.contentMode = .scaleAspectFit
         
-        let printController = UIPrintInteractionController.shared
-        let printInfo = UIPrintInfo(dictionary: nil)
-        printInfo.jobName = "Barcode Print"
-        printInfo.outputType = .photo
-        printController.printInfo = printInfo
-        printController.printingItem = compositeImage
+        let alert = UIAlertController(title: "Barcode", message: nil, preferredStyle: .alert)
+        alert.view.addSubview(imageView)
         
-        printController.present(animated: true) { _, completed, error in
-            if completed {
-                print("Print job completed successfully.")
-            } else if let error = error {
-                print("Print job failed: \(error.localizedDescription)")
-            } else {
-                print("Print job was canceled.")
-            }
-        }
+        // Adjust alert size
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            imageView.topAnchor.constraint(equalTo: alert.view.topAnchor, constant: 60),
+            imageView.centerXAnchor.constraint(equalTo: alert.view.centerXAnchor),
+            imageView.widthAnchor.constraint(equalToConstant: stickerSize.width),
+            imageView.heightAnchor.constraint(equalToConstant: stickerSize.height),
+            alert.view.heightAnchor.constraint(equalToConstant: stickerSize.height + 120) // Add space for buttons
+        ])
+        
+        alert.addAction(UIAlertAction(title: "Print", style: .default, handler: { _ in
+            print("Print button tapped")
+            // Add functionality for printing later
+        }))
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        
+        viewController.present(alert, animated: true)
     }
 }
 

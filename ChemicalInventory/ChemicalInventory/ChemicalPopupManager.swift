@@ -26,7 +26,8 @@ class ChemicalPopupManager {
             return
         }
 
-        let space = chemicalInfo["space"] as? String  // Optional field for space
+        let barcode = chemicalInfo["barcode"] as? String
+        let space = chemicalInfo["space"] as? String
 
         DispatchQueue.main.async {
             let appearance = SCLAlertView.SCLAppearance(
@@ -59,6 +60,14 @@ class ChemicalPopupManager {
             alert.addButton("Edit") {
                 ChemicalPopupManager.shared.showEditChemicalPopup(chemicalInfo: chemicalInfo, in: viewController)
             }
+            
+            if let barcode = barcode {
+                alert.addButton("Print") {
+                    let barcodeGenerator = BarcodeGenerator()
+                    barcodeGenerator.showBarcodePopup(barcodeString: barcode, in: viewController)
+                }
+            }
+            
             alert.addButton("Cancel", action: {})
 
             // Show alert
