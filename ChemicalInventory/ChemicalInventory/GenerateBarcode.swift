@@ -71,14 +71,24 @@ class BarcodeGenerator {
 
     /// Creates a barcode image from a given string.
     private func createBarcodeImage(from string: String) -> UIImage? {
-        guard let data = string.data(using: .ascii) else { return nil }
+        guard let data = string.data(using: .ascii) else {
+            print("DEBUG: Failed to convert string to ASCII data.")
+            return nil
+        }
+
         if let filter = CIFilter(name: "CICode128BarcodeGenerator") {
             filter.setValue(data, forKey: "inputMessage")
             filter.setValue(7.0, forKey: "inputQuietSpace")
+            print("DEBUG: Input data for barcode:", data) // Debug input data
             if let ciImage = filter.outputImage {
                 let transformedImage = ciImage.transformed(by: CGAffineTransform(scaleX: 10, y: 10))
+                print("DEBUG: Barcode generated successfully.")
                 return UIImage(ciImage: transformedImage)
+            } else {
+                print("DEBUG: Failed to generate CIImage for barcode.")
             }
+        } else {
+            print("DEBUG: CICode128BarcodeGenerator filter not found.")
         }
         return nil
     }
@@ -110,12 +120,35 @@ class BarcodeGenerator {
         
         alert.addAction(UIAlertAction(title: "Print", style: .default, handler: { _ in
             print("Print button tapped")
-            // Add functionality for printing later
+            self.printBarcodeImage(barcodeSticker: barcodeSticker)
         }))
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
         
         viewController.present(alert, animated: true)
+    }
+    
+    private func printBarcodeImage(barcodeSticker: UIImage) {
+        let printController = UIPrintInteractionController.shared
+        
+        let printInfo = UIPrintInfo(dictionary: nil)
+        printInfo.outputType = .photo
+        printInfo.jobName = "Barcode Sticker"
+        printController.printInfo = printInfo
+        
+        // Set the barcode sticker as the printing item
+        printController.printingItem = barcodeSticker
+        
+        // Present the print interaction controller
+        printController.present(animated: true) { _, completed, error in
+            if completed {
+                print("Print job completed successfully.")
+            } else if let error = error {
+                print("Print job failed: \(error.localizedDescription)")
+            } else {
+                print("Print job was canceled.")
+            }
+        }
     }
 }
 
